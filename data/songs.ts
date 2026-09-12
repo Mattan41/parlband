@@ -10,18 +10,11 @@ export interface Song {
 
 const songs: Song[] = [
   {
-    id: "1",
-    title: "Summer Breeze",
+    id: "fri",
+    title: "Fri",
     artist: "Parlband",
-    src: "/audio/summer-breeze.mp3",
-    cover: "/covers/summer-breeze.jpg",
-  },
-  {
-    id: "2",
-    title: "City Lights",
-    artist: "Parlband",
-    src: "/audio/city-lights.mp3",
-    cover: "/covers/city-lights.jpg",
+    src: "/audio/Fri.mp3",
+    cover: "",
   },
 ];
 

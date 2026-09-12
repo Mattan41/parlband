@@ -85,12 +85,14 @@ export default function AudioPlayer({ song }: { song: Song }) {
       {/* hidden audio element */}
       <audio ref={audioRef} src={song.src} preload="metadata" />
 
-      {/* cover image */}
-      <img
-        src={song.cover}
-        alt={song.title}
-        className="h-16 w-16 rounded-lg object-cover"
-      />
+      {/* cover image (only if a cover URL is provided) */}
+      {song.cover ? (
+        <img
+          src={song.cover}
+          alt={song.title}
+          className="h-16 w-16 rounded-lg object-cover"
+        />
+      ) : null}
 
       {/* track info + controls */}
       <div className="min-w-0 flex-1">
