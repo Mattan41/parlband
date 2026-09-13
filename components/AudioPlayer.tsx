@@ -151,7 +151,7 @@ export default function AudioPlayer({ song }: { song: Song }) {
 
       {/* download button */}
       <a
-        href={song.src}
+        href={song.downloadSrc}
         download
         className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200 transition hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600"
         aria-label="Download"
