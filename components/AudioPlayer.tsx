@@ -3,6 +3,8 @@
 import { useRef, useState, useEffect } from "react";
 import type { Song } from "@/data/songs";
 
+let currentlyPlayingAudio: HTMLAudioElement | null = null;
+
 export default function AudioPlayer({ song }: { song: Song }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -13,7 +15,12 @@ export default function AudioPlayer({ song }: { song: Song }) {
   const togglePlay = () => {
     if (!audioRef.current) return;
     if (audioRef.current.paused) {
+      // Pause any other currently playing audio
+      if (currentlyPlayingAudio && currentlyPlayingAudio !== audioRef.current) {
+        currentlyPlayingAudio.pause();
+      }
       void audioRef.current.play();
+      currentlyPlayingAudio = audioRef.current;
       setIsPlaying(true);
     } else {
       audioRef.current.pause();
@@ -39,6 +46,10 @@ export default function AudioPlayer({ song }: { song: Song }) {
     setCurrentTime(0);
   };
 
+  const handlePause = () => {
+    setIsPlaying(false);
+  };
+
   const seek = (e: React.ChangeEvent<HTMLInputElement>) => {
     const time = Number(e.target.value);
     if (audioRef.current) {
@@ -54,10 +65,12 @@ export default function AudioPlayer({ song }: { song: Song }) {
     audio.addEventListener("timeupdate", handleTimeUpdate);
     audio.addEventListener("loadedmetadata", handleLoadedMetadata);
     audio.addEventListener("ended", handleEnded);
+    audio.addEventListener("pause", handlePause);
     return () => {
       audio.removeEventListener("timeupdate", handleTimeUpdate);
       audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
       audio.removeEventListener("ended", handleEnded);
+      audio.removeEventListener("pause", handlePause);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [song.src]);
