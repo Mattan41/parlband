@@ -113,7 +113,18 @@ export default function AudioPlayer({ song }: { song: Song }) {
           {song.title}
         </h3>
         <p className="truncate text-sm text-zinc-600 dark:text-zinc-400">
-          {song.artist}
+          {[
+            song.text === song.music
+                ? song.text && `Text & musik: ${song.text}`
+                : [
+                  song.text && `Text: ${song.text}`,
+                  song.music && `Musik: ${song.music}`,
+                ]
+                    .filter(Boolean)
+                    .join(" · "),
+          ]
+              .filter(Boolean)
+              .join(" · ")}
         </p>
 
         <div className="mt-2 flex items-center gap-2">
@@ -163,17 +174,17 @@ export default function AudioPlayer({ song }: { song: Song }) {
       </div>
 
       {/* download button */}
-      <a
-        href={song.downloadSrc}
+      {song.downloadSrc && (
+          <a href={song.downloadSrc}
         download
         className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200 transition hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600"
-        aria-label="Download"
-      >
+        aria-label="Download">
         <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16">
           <path d="M7.293 11.293a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L9 8.086V2.005a1 1 0 00-2 0v6.08L5.707 6.88a1 1 0 10-1.414 1.414l3 3z" />
           <path d="M2 14a1 1 0 100 2h12a1 1 0 100-2H2z" />
         </svg>
-      </a>
+          </a>
+        )}
     </div>
   );
 }
