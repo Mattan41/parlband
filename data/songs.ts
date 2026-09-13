@@ -12,7 +12,7 @@ const songs: Song[] = [
   {
     id: "fri",
     title: "Fri",
-    artist: "Parlband",
+    artist: "Pärlband",
     src: "/audio/Fri.mp3",
     cover: "",
   },
