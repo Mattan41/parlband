@@ -9,10 +9,10 @@ export default function Home() {
       <main className="flex w-full max-w-2xl flex-col gap-8 px-4 py-16">
         <header className="text-center">
           <h1 className="text-3xl font-bold text-black dark:text-zinc-50">
-            Parlband
+            Pärlband
           </h1>
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-            Self-produced tunes
+            Våra låtar
           </p>
         </header>
 
