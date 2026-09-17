@@ -4,13 +4,16 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "dev:d1": "concurrently -k -n \"next,wrangler\" -c \"cyan,magenta\" \"next dev --port 3000\" \"wrangler pages dev --port=8788 --proxy=3000\"", 
+    "dev:d1": "concurrently -k -n \"next,wrangler\" -c \"cyan,magenta\" \"next dev --port 3000\" \"wrangler pages dev --port=8788 --proxy=3000\"",
     "build": "next build",
     "preview": "npm run build && wrangler pages dev out",
     "db:migrate": "wrangler d1 migrations apply parlband-db --local",
     "db:reset": "rm -rf .wrangler/state/v3/d1 && npm run db:migrate && wrangler d1 execute parlband-db --local --file=seeds.sql",
     "start": "next start",
     "lint": "eslint",
+    "lint:fix": "eslint --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "clean": "rm -rf .next dist out build"
   },
   "dependencies": {
@@ -27,6 +30,8 @@
     "concurrently": "^10.0.5",
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.7",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

@@ -14,11 +14,11 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   verification: {
-    google: "8yoGR-_zyJpBOkn1gmVkHu1ilknFjHVvqtJDmG4Lem8"
+    google: "8yoGR-_zyJpBOkn1gmVkHu1ilknFjHVvqtJDmG4Lem8",
   },
   title: "Pärlband",
   description: "Officiell hemsida för Pärlband – musik, låttexter och ackord.",
-  metadataBase: new URL('https://parlband.kruskopf.org'),
+  metadataBase: new URL("https://parlband.kruskopf.org"),
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

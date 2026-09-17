@@ -62,12 +62,12 @@ database_id = "b685ab25-61b7-4ebe-bc25-6a22bd8b2b99"
 Klienten bygger fullständiga URL:er utifrån filnamnen. Basen kommer från
 `NEXT_PUBLIC_AUDIO_BASE_URL` (t.ex. `https://cdn.kruskopf.org`).
 
-| Kolumn i D1 | Byggs i `toSong()` till |
-| --- | --- |
-| `mp3_path` | `${NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/mp3/<mp3_path>` → `src` |
-| `wav_path` | `${NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/wav/<wav_path>` → `downloadSrc` |
-| `cover_path` | `${NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/images/<cover_path>` → `cover` |
-| `sheet_music_path` | Ingen URL byggs ännu (ingen UI använder den) |
+| Kolumn i D1        | Byggs i `toSong()` till                                                 |
+| ------------------ | ----------------------------------------------------------------------- |
+| `mp3_path`         | `${NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/mp3/<mp3_path>` → `src`         |
+| `wav_path`         | `${NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/wav/<wav_path>` → `downloadSrc` |
+| `cover_path`       | `${NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/images/<cover_path>` → `cover`  |
+| `sheet_music_path` | Ingen URL byggs ännu (ingen UI använder den)                            |
 
 Saknas `wav_path` utelämnas nedladdningsknappen, och låtar utan `mp3_path`
 filtreras bort i frontend.
@@ -100,6 +100,7 @@ Använd alltid `--remote` för produktionsdata – utan flaggan hamnar ändringe
 den lokala testdatabasen.
 
 ## Principer
+
 - **Sångtext (`lyrics`)** ligger på `songs` då texten hör till låten oavsett inspelning.
 - **Noter/ackord (`sheet_music_path`)** länkas som färdiga PDF-filer lagrade i R2 istället för råtext i databasen för att garantera perfekt typografi och formatering.
 - **Filer & Spelningar** ligger på `recordings` så att framtida remasters eller liveversioner inte rör verksdatan.

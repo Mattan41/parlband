@@ -48,10 +48,16 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
        ORDER BY r.song_id, m.name, rc.instrument`
     ).all<CreditRow>();
 
-    const creditsBySong = new Map<string, { musician: string; instrument: string }[]>();
+    const creditsBySong = new Map<
+      string,
+      { musician: string; instrument: string }[]
+    >();
     for (const credit of creditsResult.results) {
       const credits = creditsBySong.get(credit.song_id) ?? [];
-      credits.push({ musician: credit.musician, instrument: credit.instrument });
+      credits.push({
+        musician: credit.musician,
+        instrument: credit.instrument,
+      });
       creditsBySong.set(credit.song_id, credits);
     }
 
