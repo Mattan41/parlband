@@ -1,9 +1,40 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import AudioPlayer from "@/components/AudioPlayer";
-import songs from "@/data/songs";
+import { toSong, type Song, type SongRow } from "@/data/songs";
 
 export default function Home() {
+  const [songs, setSongs] = useState<Song[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch("/api/songs")
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Failed to load songs: ${response.status}`);
+        }
+        return response.json() as Promise<SongRow[]>;
+      })
+      .then((rows) => {
+        if (cancelled) return;
+        setSongs(rows.map(toSong).filter((song) => song.src !== ""));
+      })
+      .catch(() => {
+        if (!cancelled) setError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div className="flex flex-1 flex-col items-center bg-zinc-50 font-sans dark:bg-black">
       <main className="flex w-full max-w-2xl flex-col gap-10 px-4 py-16">
@@ -83,7 +114,13 @@ export default function Home() {
           </p>
         </header>
 
-        {songs.length === 0 ? (
+        {loading ? (
+          <p className="text-center text-zinc-500">Laddar låtar…</p>
+        ) : error ? (
+          <p className="text-center text-zinc-500">
+            Kunde inte ladda låtarna just nu.
+          </p>
+        ) : songs.length === 0 ? (
           <p className="text-center text-zinc-500">No songs yet.</p>
         ) : (
           <div className="space-y-6">

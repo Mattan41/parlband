@@ -4,7 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:d1": "concurrently -k -n \"next,wrangler\" -c \"cyan,magenta\" \"next dev --port 3000\" \"wrangler pages dev --port=8788 --proxy=3000\"", 
     "build": "next build",
+    "preview": "npm run build && wrangler pages dev out",
+    "db:migrate": "wrangler d1 migrations apply parlband-db --local",
+    "db:reset": "rm -rf .wrangler/state/v3/d1 && npm run db:migrate && wrangler d1 execute parlband-db --local --file=seeds.sql",
     "start": "next start",
     "lint": "eslint",
     "clean": "rm -rf .next dist out build"
@@ -15,10 +19,12 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260917.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^10.0.5",
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
     "tailwindcss": "^4",
