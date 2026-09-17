@@ -46,3 +46,9 @@ next-env.d.ts
 
 # Local files
 docs/local/
+
+# Wranlger
+.wrangler/
+.wrangler.*
+.cloudflare/
+.dev.vars

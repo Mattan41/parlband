@@ -1,0 +1,8 @@
+name = "parlband"
+pages_build_output_dir = "out"
+compatibility_date = "2026-09-11"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "parlband-db"
+database_id = "b685ab25-61b7-4ebe-bc25-6a22bd8b2b99"

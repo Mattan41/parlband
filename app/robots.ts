@@ -1,15 +1,15 @@
-import type { MetadataRoute } from 'next';
+import type { MetadataRoute } from "next";
 
-export const dynamic = 'force-static';
+export const dynamic = "force-static";
 
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
       {
-        userAgent: '*',
-        allow: '/',
+        userAgent: "*",
+        allow: "/",
       },
     ],
-    sitemap: 'https://parlband.kruskopf.org/sitemap.xml',
+    sitemap: "https://parlband.kruskopf.org/sitemap.xml",
   };
 }

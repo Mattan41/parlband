@@ -1,96 +1,62 @@
-export interface Song {
+export interface SongCredit {
+  musician: string;
+  instrument: string;
+}
+
+/**
+ * Raw song shape returned by GET /api/songs.
+ * Mirrors the D1 schema (songs + recordings) with nested recording credits.
+ */
+export interface SongRow {
   id: string;
   title: string;
   artist: string;
+  lyrics_by: string;
+  music_by: string;
+  lyrics: string | null;
+  sheet_music_path: string | null;
+  album: string | null;
+  studio: string | null;
+  year: number | null;
+  engineer: string | null;
+  mp3_path: string | null;
+  wav_path: string | null;
+  cover_path: string | null;
+  play_count: number | null;
+  credits: SongCredit[];
+}
+
+/**
+ * UI-facing song model consumed by components/AudioPlayer.tsx.
+ * Adds helper URLs derived from the stored R2 paths.
+ */
+export interface Song extends SongRow {
+  /** Songwriter, mapped from `lyrics_by` for the player UI. */
   text: string;
+  /** Composer, mapped from `music_by` for the player UI. */
   music: string;
-  /** Streaming MP3 URL */
+  /** Streaming MP3 URL. */
   src: string;
-  /** High-quality WAV download URL */
+  /** High-quality WAV download URL, only present when `wav_path` exists. */
   downloadSrc?: string;
-  /** Path relative to public/ */
+  /** Cover image URL, or "" when `cover_path` is missing. */
   cover: string;
 }
 
-const songs: Song[] = [
-  {
-    id: "fri",
-    title: "Fri",
-    artist: "Pärlband",
-    text: "Nova Kruskopf Eriksson",
-    music: "Nova Kruskopf Eriksson",
-    src: `${process.env.NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/mp3/fri.mp3`,
-    downloadSrc: `${process.env.NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/wav/fri.wav`,
-    cover: "",
-  },
-  {
-    id: "som-en-legend",
-    title: "Som en Legend",
-    artist: "Pärlband",
-    text: "Mats Kruskopf Eriksson",
-    music: "Mats Kruskopf Eriksson",
-    src: `${process.env.NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/mp3/som-en-legend.mp3`,
-    downloadSrc: `${process.env.NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/wav/som-en-legend.wav`,
-    cover: "",
-  },
-  {
-    id: "cohen-och-kent",
-    title: "Cohen och Kent",
-    artist: "Pärlband",
-    text: "Isabel Evers",
-    music: "Mats Kruskopf Eriksson",
-    src: `${process.env.NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/mp3/cohen-och-kent.mp3`,
-    downloadSrc: `${process.env.NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/wav/cohen-och-kent.wav`,
-    cover: "",
-  },
-  {
-    id: "mareld-i-natt",
-    title: "Mareld i natt",
-    artist: "Pärlband",
-    text: "Nova Kruskopf Eriksson",
-    music: "Nova Kruskopf Eriksson",
-    src: `${process.env.NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/mp3/mareld-i-natt.mp3`,
-    cover: "",
-  },
-  {
-    id: "sommarn-pa-boganeberget",
-    title: "Sommarn på Boganeberget",
-    artist: "Pärlband",
-    text: "Nova Kruskopf Eriksson",
-    music: "Nova Kruskopf Eriksson",
-    src: `${process.env.NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/mp3/sommarn-pa-boganeberget.mp3`,
-    downloadSrc: `${process.env.NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/wav/sommarn-pa-boganeberget.wav`,
-    cover: "",
-  },
-  {
-    id: "mitt-ute-pa-fyrken",
-    title: "Mitt ute på Fryken",
-    artist: "Pärlband",
-    text: "Nova Kruskopf Eriksson",
-    music: "Örjan Ahnoff",
-    src: `${process.env.NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/mp3/mitt-ute-pa-fryken.mp3`,
-    downloadSrc: `${process.env.NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/wav/mitt-ute-pa-fryken.wav`,
-    cover: "",
-  },
-  {
-    id: "klockan-12",
-    title: "Klockan 12",
-    artist: "Pärlband",
-    text: "Mats Kruskopf Eriksson",
-    music: "Mats Kruskopf Eriksson",
-    src: `${process.env.NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/mp3/klockan-12.mp3`,
-    cover: "",
-  },
-  {
-    id: "slaget-vid-poltava",
-    title: "Slaget vid poltava",
-    artist: "Pärlband",
-    text: "Nova Kruskopf Eriksson",
-    music: "Nova Kruskopf Eriksson",
-    src: `${process.env.NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/mp3/slaget-vid-poltava.mp3`,
-    downloadSrc: `${process.env.NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/wav/slaget-vid-poltava.wav`,
-    cover: "",
-  },
-];
+const AUDIO_BASE_URL = process.env.NEXT_PUBLIC_AUDIO_BASE_URL ?? "";
 
-export default songs;
+/** Build the streaming/download/cover URLs and UI aliases from an API row. */
+export function toSong(row: SongRow): Song {
+  return {
+    ...row,
+    text: row.lyrics_by,
+    music: row.music_by,
+    src: row.mp3_path ? `${AUDIO_BASE_URL}/parlband/mp3/${row.mp3_path}` : "",
+    downloadSrc: row.wav_path
+      ? `${AUDIO_BASE_URL}/parlband/wav/${row.wav_path}`
+      : undefined,
+    cover: row.cover_path
+      ? `${AUDIO_BASE_URL}/parlband/images/${row.cover_path}`
+      : "",
+  };
+}

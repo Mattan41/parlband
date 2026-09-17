@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect } from "react";
 import type { Song } from "@/data/songs";
+import Image from "next/image";
 
 let currentlyPlayingAudio: HTMLAudioElement | null = null;
 
@@ -10,6 +11,17 @@ export default function AudioPlayer({ song }: { song: Song }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [prevSrc, setPrevSrc] = useState(song.src);
+
+  // Reset the playback UI when the track changes. Adjusting state during
+  // render (instead of in an effect) is the pattern recommended by the React
+  // docs: React discards the current output and re-renders immediately, so no
+  // extra commit or cascading render is triggered.
+  if (prevSrc !== song.src) {
+    setPrevSrc(song.src);
+    setIsPlaying(false);
+    setCurrentTime(0);
+  }
 
   // -------- play / pause ----------
   const togglePlay = () => {
@@ -72,16 +84,11 @@ export default function AudioPlayer({ song }: { song: Song }) {
       audio.removeEventListener("ended", handleEnded);
       audio.removeEventListener("pause", handlePause);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [song.src]);
 
-  // Reset when the song changes
+  // -------- keep the media element in sync with the current track ----------
   useEffect(() => {
-    setIsPlaying(false);
-    setCurrentTime(0);
-    if (audioRef.current) {
-      audioRef.current.load();
-    }
+    audioRef.current?.load();
   }, [song.src]);
 
   // -------- formatting ----------
@@ -100,7 +107,7 @@ export default function AudioPlayer({ song }: { song: Song }) {
 
       {/* cover image (only if a cover URL is provided) */}
       {song.cover ? (
-        <img
+        <Image
           src={song.cover}
           alt={song.title}
           className="h-16 w-16 rounded-lg object-cover"
@@ -115,16 +122,16 @@ export default function AudioPlayer({ song }: { song: Song }) {
         <p className="truncate text-sm text-zinc-600 dark:text-zinc-400">
           {[
             song.text === song.music
-                ? song.text && `Text & musik: ${song.text}`
-                : [
+              ? song.text && `Text & musik: ${song.text}`
+              : [
                   song.text && `Text: ${song.text}`,
                   song.music && `Musik: ${song.music}`,
                 ]
-                    .filter(Boolean)
-                    .join(" · "),
+                  .filter(Boolean)
+                  .join(" · "),
           ]
-              .filter(Boolean)
-              .join(" · ")}
+            .filter(Boolean)
+            .join(" · ")}
         </p>
 
         <div className="mt-2 flex items-center gap-2">
@@ -136,21 +143,13 @@ export default function AudioPlayer({ song }: { song: Song }) {
           >
             {isPlaying ? (
               // pause icon
-              <svg
-                className="h-4 w-4"
-                fill="currentColor"
-                viewBox="0 0 16 16"
-              >
+              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16">
                 <rect x="2" y="2" width="4" height="12" rx="1" />
                 <rect x="10" y="2" width="4" height="12" rx="1" />
               </svg>
             ) : (
               // play icon
-              <svg
-                className="h-4 w-4"
-                fill="currentColor"
-                viewBox="0 0 16 16"
-              >
+              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16">
                 <polygon points="4,2 14,8 4,14" />
               </svg>
             )}
@@ -175,16 +174,18 @@ export default function AudioPlayer({ song }: { song: Song }) {
 
       {/* download button */}
       {song.downloadSrc && (
-          <a href={song.downloadSrc}
-        download
-        className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200 transition hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600"
-        aria-label="Download">
-        <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16">
-          <path d="M7.293 11.293a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L9 8.086V2.005a1 1 0 00-2 0v6.08L5.707 6.88a1 1 0 10-1.414 1.414l3 3z" />
-          <path d="M2 14a1 1 0 100 2h12a1 1 0 100-2H2z" />
-        </svg>
-          </a>
-        )}
+        <a
+          href={song.downloadSrc}
+          download
+          className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200 transition hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600"
+          aria-label="Download"
+        >
+          <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M7.293 11.293a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L9 8.086V2.005a1 1 0 00-2 0v6.08L5.707 6.88a1 1 0 10-1.414 1.414l3 3z" />
+            <path d="M2 14a1 1 0 100 2h12a1 1 0 100-2H2z" />
+          </svg>
+        </a>
+      )}
     </div>
   );
 }
