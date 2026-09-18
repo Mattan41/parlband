@@ -16,16 +16,28 @@ D1 (parlband-db)
                            └─ functions/api/plays.ts  POST /api/plays
                                 (StickyPlayer increments recordings.play_count
                                  after 5 s of continuous playback)
+  └─ functions/api/admin/*    /api/admin/*   (CRUD + R2 uploads, all recordings)
+       └─ app/admin/page.tsx  admin UI (protected by Cloudflare Access)
 ```
 
-The binding is defined in `wrangler.toml` and is named `DB`:
+The D1 binding is defined in `wrangler.toml` and is named `DB`. The R2 bucket
+that holds all files is bound as `CDN`:
 
 ```toml
 [[d1_databases]]
 binding = "DB"
 database_name = "parlband-db"
 database_id = "b685ab25-61b7-4ebe-bc25-6a22bd8b2b99"
+
+[[r2_buckets]]
+binding = "CDN"
+bucket_name = "kruskopf-cdn"
 ```
+
+Both bindings are shared by every Pages Function through the `Env` interface in
+`functions/types.d.ts`. When deploying through the Cloudflare Pages dashboard
+instead of Wrangler, the same bindings must also exist under the project's
+settings.
 
 ## Tables
 
@@ -42,7 +54,11 @@ database_id = "b685ab25-61b7-4ebe-bc25-6a22bd8b2b99"
   - `id`: Autoincrement, `song_id` → `songs.id`.
   - `album`, `studio`, `year`, `engineer`, `notes`: Technical metadata.
   - `mp3_path`, `wav_path`, `cover_path`: File names in R2 (see [UPLOADING.md](./UPLOADING.md)).
-  - `play_count`: Number of plays.
+  - `play_count`: Number of plays. Derived counter – never set through the admin
+    API.
+  - `is_primary`: `1` for the recording the public API serves for the song. A
+    song may have several recordings (e.g. studio + live); only the primary one
+    is exposed publicly. The admin API keeps exactly one primary per song.
 
 - **musicians** – Registry of contributing musicians (`id`, `name`).
 
@@ -59,14 +75,79 @@ database_id = "b685ab25-61b7-4ebe-bc25-6a22bd8b2b99"
 `wav_path`, `cover_path`, `play_count` and
 `credits: Array<{ musician, instrument }>`.
 
-- Each song is linked to its **latest** recording (`ORDER BY r2.id DESC LIMIT 1`),
-  so a future remaster becomes the one displayed without changing the work data.
-- `credits` is merged per song from the song's recordings and sorted by musician.
+- Each song is linked to its **primary** recording
+  (`ORDER BY r2.is_primary DESC, r2.id DESC LIMIT 1`), so a future remaster
+  becomes the one displayed by flagging it as primary instead of relying on
+  insert order. When nothing is flagged the newest recording is used.
+- `credits` are scoped to that same primary recording and sorted by musician,
+  so the list always describes the recording that is actually played – not a
+  union of every recording of the song.
 - `recording_id` is the `recordings.id` of the exact recording that
   `mp3_path`/`wav_path` come from (the same subquery row). This is the id sent to
   `POST /api/plays`. If a song ever displays multiple recordings at the same
   time, a single `recording_id` per `Song` is no longer sufficient – see the
   comment in `toSong()`.
+
+## Admin API (functions/api/admin/\*)
+
+The admin surface at `/admin` is protected by **Cloudflare Access** at the edge
+(see [UPLOADING.md](./UPLOADING.md) for the second destination that covers
+`/api/admin*`). Cloudflare Access does not run locally, so during `npm run
+dev:d1` the admin routes are open – that is expected.
+
+| Endpoint                | Methods                 | Purpose                                                                                            |
+| ----------------------- | ----------------------- | -------------------------------------------------------------------------------------------------- |
+| `/api/admin/songs`      | `GET`, `POST`, `PUT`    | List every song with **all** its recordings and each recording's credits; create and update songs. |
+| `/api/admin/recordings` | `POST`, `PUT`, `DELETE` | Create a recording under a song, update one (including `is_primary`), or delete it.                |
+| `/api/admin/credits`    | `POST`, `DELETE`        | Add or remove a `(recording_id, musician_id, instrument)` row.                                     |
+| `/api/admin/musicians`  | `GET`, `POST`           | List musicians for the dropdown; create one by name (case-insensitive and idempotent).             |
+| `/api/admin/upload`     | `POST`                  | Proxy an mp3/wav/cover upload into R2 (see [UPLOADING.md](./UPLOADING.md)).                        |
+
+`GET /api/admin/songs` returns one object per song with every recording nested
+(not only the primary one needed by the public API):
+
+```json
+{
+  "songs": [
+    {
+      "id": "fri",
+      "title": "Fri",
+      "recordings": [
+        {
+          "id": 1,
+          "year": 2023,
+          "mp3_path": "fri.mp3",
+          "play_count": 0,
+          "is_primary": 1,
+          "credits": [
+            {
+              "musician_id": 2,
+              "musician": "Nova Kruskopf Eriksson",
+              "instrument": "Sång"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+Conventions:
+
+- Bodies and responses are JSON. Errors are `{ "error": "..." }` with a `4xx`/`5xx`
+  status; bad input returns `400`, missing rows `404`, duplicate song ids `409`.
+- `DELETE` takes its key(s) as query parameters, e.g.
+  `/api/admin/recordings?id=1` and
+  `/api/admin/credits?recording_id=1&musician_id=2&instrument=Sång`.
+- `play_count` is read-only: it is returned but ignored by `POST`/`PUT`.
+- Setting `is_primary: true` clears the flag on the song's other recordings in
+  the same `batch()`, so a song never has two primaries.
+- Deleting a recording also deletes its credits but leaves the R2 files in the
+  bucket. This is intentional: storage is cheap and it avoids accidental data
+  loss (an R2 lifecycle rule could clean up strays later).
+- Song ids are slugs (`^[a-z0-9]+(-[a-z0-9]+)*$`); the admin UI derives them
+  from the title.
 
 ## Plays: POST /api/plays
 

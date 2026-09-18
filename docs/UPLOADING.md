@@ -17,6 +17,42 @@ names, credits, etc.) lives in D1 and is added separately – see
 - MP3 files need NO content-disposition (they are meant to be streamed in the player)
 - File names: pure ASCII, no spaces or å/ä/ö
 
+## Via the admin UI
+
+`/admin` (protected by Cloudflare Access) uploads files through
+`functions/api/admin/upload.ts` instead of the CLI. The file is sent as the raw
+request body and **streamed** straight into R2, so nothing is buffered in the
+Worker:
+
+```
+POST /api/admin/upload?kind=mp3|wav|cover&song_id=<slug>[&recording_id=<id>]
+Content-Type: <the file's content type>
+<raw file bytes>
+```
+
+- The R2 key follows the existing convention:
+  `<song_id>.mp3` → `parlband/mp3/`, `<song_id>.wav` → `parlband/wav/`,
+  `<song_id>.<jpg|png|webp|avif|gif>` → `parlband/images/`.
+- WAV objects get `content-disposition: attachment`; MP3 gets none – same as the
+  CLI commands below.
+- When `recording_id` is given, the matching column (`mp3_path` / `wav_path` /
+  `cover_path`) is updated to the stored file name, so no separate save is
+  needed.
+- Size limits: mp3 25 MB, cover 10 MB, wav 50 MB. The WAV limit keeps the upload
+  inside the Worker's memory ceiling while streaming; larger masters need the
+  CLI below (or a future multipart upload).
+- The returned URL uses `NEXT_PUBLIC_AUDIO_BASE_URL`, so the same file is
+  immediately reachable at `https://cdn.kruskopf.org/parlband/...`.
+
+### Cloudflare Access
+
+Access protects `parlband.kruskopf.org/admin*` **and**
+`parlband.kruskopf.org/api/admin*` – two destinations on the same Access
+application with the same policy. The second one is essential: protecting only
+the UI route would leave the write endpoints open to anyone who finds the URL.
+Access runs only at Cloudflare's edge, so local `wrangler pages dev` does not
+enforce it (expected, not a bug).
+
 ## Uploading a new song
 
 ```bash
