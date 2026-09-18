@@ -9,6 +9,14 @@ export interface SongCredit {
  */
 export interface SongRow {
   id: string;
+  /**
+   * Id of the specific recording the `src`/`downloadSrc` URLs were built from.
+   * Sent to POST /api/plays so the counter lands on the recording that is
+   * actually played. Note: if a Song ever exposes multiple recordings (e.g.
+   * studio + live at the same time), a single `recording_id` per Song is no
+   * longer sufficient.
+   */
+  recording_id: number | null;
   title: string;
   artist: string;
   lyrics_by: string;

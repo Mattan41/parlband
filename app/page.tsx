@@ -43,11 +43,15 @@ export default function Home() {
           <h1 className="text-6xl font-bold tracking-tight text-zinc-900 sm:text-7xl dark:text-zinc-50">
             Pärlband
           </h1>
-          <Image
-            src={`${process.env.NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/images/parlband.jpg`}
-            alt="Pärlband"
-            className="my-6 w-full rounded-2xl object-cover shadow-md"
-          />
+          <div className="relative my-6 aspect-video w-full overflow-hidden rounded-2xl shadow-md">
+            <Image
+              src={`${process.env.NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/images/parlband.jpg`}
+              alt="Pärlband"
+              fill
+              className="object-cover"
+              priority
+            />
+          </div>
           <h2 className="text-sm font-medium tracking-wide text-zinc-600 dark:text-zinc-400">
             <span className="inline-block whitespace-nowrap">Örjan Ahnoff</span>
             <span className="mx-2 text-zinc-400 dark:text-zinc-600">·</span>

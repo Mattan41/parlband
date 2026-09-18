@@ -8,9 +8,12 @@ låtlista i koden.
 
 ```
 D1 (parlband-db)
-  └─ functions/api/songs.ts   GET /api/songs  (rå rader + nästlade credits)
+  └─ functions/api/songs.ts   GET /api/songs   (rå rader + nästlade credits)
        └─ data/songs.ts       toSong(): rad → Song + hjälp-URL:er
             └─ app/page.tsx   hämtar /api/songs vid mount → <AudioPlayer>
+                 └─ functions/api/plays.ts  POST /api/plays
+                      (AudioPlayer räknar upp recordings.play_count efter
+                       5 s sammanhängande uppspelning)
 ```
 
 Bindningen definieras i `wrangler.toml` och heter `DB`:
@@ -49,13 +52,31 @@ database_id = "b685ab25-61b7-4ebe-bc25-6a22bd8b2b99"
 
 `GET /api/songs` returnerar en array med ett objekt per låt:
 
-`id`, `title`, `artist`, `lyrics_by`, `music_by`, `lyrics`, `sheet_music_path`,
-`album`, `studio`, `year`, `engineer`, `mp3_path`, `wav_path`, `cover_path`,
-`play_count` samt `credits: Array<{ musician, instrument }>`.
+`id`, `recording_id`, `title`, `artist`, `lyrics_by`, `music_by`, `lyrics`,
+`sheet_music_path`, `album`, `studio`, `year`, `engineer`, `mp3_path`,
+`wav_path`, `cover_path`, `play_count` samt
+`credits: Array<{ musician, instrument }>`.
 
 - Varje låt kopplas till sin **senaste** inspelning (`ORDER BY r2.id DESC LIMIT 1`),
   så en framtida remaster blir den som visas utan att verksdatan ändras.
 - `credits` slås ihop per låt från låtens inspelningar och sorteras på musiker.
+- `recording_id` är `recordings.id` för just den inspelning som `mp3_path`/`wav_path`
+  kommer från (samma subquery-rad). Det är detta id som skickas till
+  `POST /api/plays`. Om en låt i framtiden visar flera inspelningar samtidigt
+  räcker inte ett enda `recording_id` per `Song` – se kommentaren i `toSong()`.
+
+## Spelningar: POST /api/plays
+
+`functions/api/plays.ts` räknar upp `recordings.play_count` med 1.
+
+- **Body:** `{ "recording_id": number }` (positivt heltal).
+- **Svar:** `{ "success": true, "play_count": <nytt värde> }`.
+- **Fel:** `400` om `recording_id` saknas/är ogiltigt, `404` om ingen rad matchar,
+  `500` vid oväntat fel.
+- **Anrop:** `components/AudioPlayer.tsx` skickar anropet först efter 5 sekunders
+  **sammanhängande** uppspelning. Paus avbryter timern, låtbyte innan 5 s ger
+  ingen räkning, och samma lyssning räknas bara en gång (en replay efter att
+  låten spelats klart räknas som en ny lyssning).
 
 ## URL:er och R2
 

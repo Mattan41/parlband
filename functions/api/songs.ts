@@ -5,6 +5,7 @@ interface Env {
 /** Raw song row joined with its recording details. */
 interface SongRow {
   id: string;
+  recording_id: number | null;
   title: string;
   artist: string;
   lyrics_by: string;
@@ -32,6 +33,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     // One canonical recording per song: the most recently added one.
     const songsResult = await context.env.DB.prepare(
       `SELECT s.id, s.title, s.artist, s.lyrics_by, s.music_by, s.lyrics, s.sheet_music_path,
+              r.id AS recording_id,
               r.album, r.studio, r.year, r.engineer, r.mp3_path, r.wav_path, r.cover_path, r.play_count
        FROM songs s
        LEFT JOIN recordings r ON r.id = (
