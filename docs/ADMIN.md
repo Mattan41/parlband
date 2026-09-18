@@ -1,0 +1,79 @@
+# Admin guide
+
+The admin UI lives at `/admin` and lets the band maintain the whole catalogue
+without writing SQL or using the CLI. This document describes **what you can do**
+in the UI; for the schema see [DATABASE.md](./DATABASE.md) and for R2/CLI details
+see [UPLOADING.md](./UPLOADING.md).
+
+## Access
+
+Cloudflare Access protects `parlband.kruskopf.org/admin*` **and**
+`parlband.kruskopf.org/api/admin*` – two destinations on the same Access
+application with the same policy. The second one is essential: protecting only the
+UI route would leave the write endpoints open to anyone who finds the URL.
+
+Access runs only at Cloudflare's edge, so local `wrangler pages dev` does not
+enforce it (expected, not a bug).
+
+## Songs
+
+- **Create** a song with title, artist, `Text av` (lyricist), `Musik av`
+  (composer), lyrics text and an optional sheet music path.
+- The **id (slug)** is derived from the title and is used in file names. It may
+  only contain `a-z`, `0-9` and hyphens.
+- **Edit** any of the fields on an existing song and press "Spara låt".
+- A song only becomes **public** once it has a recording with an `mp3_path` –
+  `GET /api/songs` filters out songs without one.
+
+## Recordings
+
+A song can have several recordings (e.g. studio + live).
+
+- Fields: album, studio, year, engineer, notes, mp3 path, wav path, cover path.
+- **Huvudinspelning** (`is_primary`): exactly one per song. This is the recording
+  the public site serves; setting the flag on one clears it on the others.
+- **Play count** is derived automatically (after 5 s of continuous playback) and is
+  never set through the UI.
+- **Delete** removes the row and its credits, but leaves the R2 files in the
+  bucket. This is intentional: storage is cheap and it avoids accidental data loss.
+
+## File uploads
+
+Upload buttons fill in the matching path field and save it immediately, so no
+separate save is needed for the file.
+
+| Button                | Kind    | R2 prefix          | Stored as                               | Limit |
+| --------------------- | ------- | ------------------ | --------------------------------------- | ----- |
+| Ladda upp MP3         | `mp3`   | `parlband/mp3/`    | `<song-id>.mp3`                         | 25 MB |
+| Ladda upp WAV         | `wav`   | `parlband/wav/`    | `<song-id>.wav`                         | 50 MB |
+| Ladda upp omslag      | `cover` | `parlband/images/` | `<song-id>.<jpg\|png\|webp\|avif\|gif>` | 10 MB |
+| Ladda upp noter (PDF) | `pdf`   | `parlband/pdf/`    | `<song-id>.pdf`                         | 20 MB |
+
+- MP3, WAV and cover are uploaded from a **recording** card; the PDF from the
+  song's **Låtinfo** section.
+- Uploading a file with the same name **replaces** the previous object. Because
+  objects are cached as immutable, a replaced file may not show up in an open
+  player until the page is reloaded.
+- **WAV** is served with `content-disposition: attachment` (a download); **MP3**
+  streams and **PDF** opens inline in the browser's viewer.
+- The PDF is named `<song-id>.pdf` and the song row is updated automatically, so a
+  **new song must be saved before its PDF can be uploaded**.
+- Notes are **PDF only** (images are not accepted) and there is **exactly one**
+  sheet-music document per song. Re-uploading replaces the file in R2 (same key
+  `<song-id>.pdf`) and the stored path – it does not add a second document.
+- A public download link is planned; for now the band opens the PDF with
+  "Öppna noter ↗" above.
+- The manual "Noter (R2-sökväg, manuell)" field is still available for setting a
+  path by hand.
+
+## Credits
+
+- Credits are attached to a **recording**: a musician plus the instrument they
+  played on it.
+- Musicians must exist in the `musicians` table; pick one from the credits editor.
+- Credits describe the recording, not the song.
+
+## Related documentation
+
+- [DATABASE.md](./DATABASE.md) – tables, API response and data flow
+- [UPLOADING.md](./UPLOADING.md) – R2 key conventions, CLI commands, Cloudflare Access

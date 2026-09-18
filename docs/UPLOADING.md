@@ -25,22 +25,26 @@ request body and **streamed** straight into R2, so nothing is buffered in the
 Worker:
 
 ```
-POST /api/admin/upload?kind=mp3|wav|cover&song_id=<slug>[&recording_id=<id>]
+POST /api/admin/upload?kind=mp3|wav|cover|pdf&song_id=<slug>[&recording_id=<id>]
 Content-Type: <the file's content type>
 <raw file bytes>
 ```
 
 - The R2 key follows the existing convention:
   `<song_id>.mp3` → `parlband/mp3/`, `<song_id>.wav` → `parlband/wav/`,
-  `<song_id>.<jpg|png|webp|avif|gif>` → `parlband/images/`.
-- WAV objects get `content-disposition: attachment`; MP3 gets none – same as the
-  CLI commands below.
-- When `recording_id` is given, the matching column (`mp3_path` / `wav_path` /
-  `cover_path`) is updated to the stored file name, so no separate save is
-  needed.
-- Size limits: mp3 25 MB, cover 10 MB, wav 50 MB. The WAV limit keeps the upload
-  inside the Worker's memory ceiling while streaming; larger masters need the
-  CLI below (or a future multipart upload).
+  `<song_id>.<jpg|png|webp|avif|gif>` → `parlband/images/`,
+  `<song_id>.pdf` → `parlband/pdf/`.
+- WAV objects get `content-disposition: attachment`; MP3 and PDF get none – same
+  as the CLI commands below. PDFs therefore open inline in the browser viewer.
+- When `recording_id` is given, the matching recording column (`mp3_path` /
+  `wav_path` / `cover_path`) is updated to the stored file name, so no separate
+  save is needed.
+- A PDF belongs to the **song**, not the recording: it is stored as
+  `<song_id>.pdf` and written to `songs.sheet_music_path` (no `recording_id`
+  needed). The song must already exist, otherwise the endpoint returns `404`.
+- Size limits: mp3 25 MB, cover 10 MB, wav 50 MB, pdf 20 MB. The WAV limit keeps
+  the upload inside the Worker's memory ceiling while streaming; larger masters
+  need the CLI below (or a future multipart upload).
 - The returned URL uses `NEXT_PUBLIC_AUDIO_BASE_URL`, so the same file is
   immediately reachable at `https://cdn.kruskopf.org/parlband/...`.
 
@@ -80,8 +84,11 @@ wrangler r2 object put kruskopf-cdn/parlband/pdf/NAME.pdf \
 ```
 
 Leave `cover_path` / `sheet_music_path` as `NULL` if the file does not exist.
-For `cover_path` the app builds the URL `.../parlband/images/<cover_path>`;
-`sheet_music_path` is metadata only for now (no URL is built in the code).
+For `cover_path` the app builds the URL `.../parlband/images/<cover_path>`.
+`sheet_music_path` stores the PDF file name, served at
+`.../parlband/pdf/<sheet_music_path>`. The admin UI writes it automatically via
+`POST /api/admin/upload?kind=pdf&song_id=<slug>` (see "Via the admin UI" above);
+no public link is built in the frontend yet.
 
 ## Verify
 

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { adminJson, type AdminMusician, type AdminSong } from "@/data/admin";
 import RecordingCard from "./RecordingCard";
+import SheetMusicUpload from "./SheetMusicUpload";
 import SongFields, {
   toSongDraft,
   toSongPayload,
@@ -95,6 +96,15 @@ export default function SongSection({
               onChange={updateDraft}
               idPrefix={`song-${song.id}`}
             />
+
+            <SheetMusicUpload
+              songId={song.id}
+              path={draft.sheet_music_path}
+              onChange={(path) => updateDraft({ sheet_music_path: path })}
+              onChanged={onChanged}
+              notify={notify}
+            />
+
             <div className="mt-3">
               <button
                 type="submit"

@@ -16,7 +16,7 @@ D1 (parlband-db)
                            └─ functions/api/plays.ts  POST /api/plays
                                 (StickyPlayer increments recordings.play_count
                                  after 5 s of continuous playback)
-  └─ functions/api/admin/*    /api/admin/*   (CRUD + R2 uploads, all recordings)
+  └─ functions/api/admin/*    /api/admin/*   (CRUD + R2 uploads: mp3/wav/cover/pdf)
        └─ app/admin/page.tsx  admin UI (protected by Cloudflare Access)
 ```
 
@@ -48,7 +48,8 @@ settings.
   - `lyrics_by`: Lyricist.
   - `music_by`: Composer.
   - `lyrics`: The lyrics themselves (plain text with line breaks).
-  - `sheet_music_path`: Relative path to sheet music/chords as a PDF in R2 (optional).
+  - `sheet_music_path`: Relative path to sheet music as a PDF in R2 (optional; a
+    single document per song, uploaded from the admin UI).
 
 - **recordings** – A specific recorded version of a song.
   - `id`: Autoincrement, `song_id` → `songs.id`.
@@ -101,7 +102,7 @@ dev:d1` the admin routes are open – that is expected.
 | `/api/admin/recordings` | `POST`, `PUT`, `DELETE` | Create a recording under a song, update one (including `is_primary`), or delete it.                |
 | `/api/admin/credits`    | `POST`, `DELETE`        | Add or remove a `(recording_id, musician_id, instrument)` row.                                     |
 | `/api/admin/musicians`  | `GET`, `POST`           | List musicians for the dropdown; create one by name (case-insensitive and idempotent).             |
-| `/api/admin/upload`     | `POST`                  | Proxy an mp3/wav/cover upload into R2 (see [UPLOADING.md](./UPLOADING.md)).                        |
+| `/api/admin/upload`     | `POST`                  | Proxy an mp3/wav/cover/pdf upload into R2 (see [UPLOADING.md](./UPLOADING.md)).                    |
 
 `GET /api/admin/songs` returns one object per song with every recording nested
 (not only the primary one needed by the public API):
@@ -168,12 +169,12 @@ Conventions:
 The client builds full URLs from the file names. The base comes from
 `NEXT_PUBLIC_AUDIO_BASE_URL` (e.g. `https://cdn.kruskopf.org`).
 
-| Column in D1       | Built in `toSong()` to                                                  |
-| ------------------ | ----------------------------------------------------------------------- |
-| `mp3_path`         | `${NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/mp3/<mp3_path>` → `src`         |
-| `wav_path`         | `${NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/wav/<wav_path>` → `downloadSrc` |
-| `cover_path`       | `${NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/images/<cover_path>` → `cover`  |
-| `sheet_music_path` | No URL is built yet (nothing in the UI uses it)                         |
+| Column in D1       | Built in `toSong()` to                                                                                                  |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| `mp3_path`         | `${NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/mp3/<mp3_path>` → `src`                                                         |
+| `wav_path`         | `${NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/wav/<wav_path>` → `downloadSrc`                                                 |
+| `cover_path`       | `${NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/images/<cover_path>` → `cover`                                                  |
+| `sheet_music_path` | No URL is built in the client yet; the file is stored at `parlband/pdf/<sheet_music_path>` and uploaded by the admin UI |
 
 If `wav_path` is missing the download button is omitted, and songs without
 `mp3_path` are filtered out in the frontend.
@@ -208,10 +209,11 @@ the local test database.
 ## Principles
 
 - **Lyrics (`lyrics`)** live on `songs`, since the text belongs to the song
-  regardless of recording.
-- **Sheet music/chords (`sheet_music_path`)** are linked as finished PDF files
-  stored in R2 instead of raw text in the database, to guarantee perfect
-  typography and formatting.
+  regardless of recording. This column is the accessible, web-rendered reading
+  path (Phase 7); a future `chords` column can hold ChordPro-style chord charts.
+- **Sheet music (`sheet_music_path`)** is a single finished PDF per song, stored
+  in R2 instead of raw text in the database, to guarantee perfect typography and
+  formatting for notation/print. It is uploaded from the admin UI (PDF only).
 - **Files & recordings** live on `recordings`, so future remasters or live
   versions do not touch the work data.
 - **Schemas are versioned** with SQL files in `migrations/`, not through manual

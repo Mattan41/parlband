@@ -93,7 +93,7 @@ export default function SongFields({ draft, onChange, idPrefix }: Props) {
       </label>
 
       <label>
-        <span className={labelClass}>Noter (R2-sökväg)</span>
+        <span className={labelClass}>Noter (R2-sökväg, manuell)</span>
         <input
           className={inputClass}
           value={draft.sheet_music_path}
