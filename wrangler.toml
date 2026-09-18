@@ -9,3 +9,7 @@ NEXT_PUBLIC_AUDIO_BASE_URL = "https://cdn.kruskopf.org"
 binding = "DB"
 database_name = "parlband-db"
 database_id = "b685ab25-61b7-4ebe-bc25-6a22bd8b2b99"
+
+[[r2_buckets]]
+binding = "CDN"
+bucket_name = "kruskopf-cdn"

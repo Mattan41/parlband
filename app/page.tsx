@@ -119,8 +119,30 @@ export default function Home() {
             </p>
           </div>
 
-          <p className="mt-10 text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
-            Våra låtar
+          <a
+            href="#lyssna"
+            aria-label="Scrolla ner till låtarna"
+            className="mt-8 flex animate-bounce justify-center text-zinc-400 transition hover:text-zinc-600 dark:text-zinc-600 dark:hover:text-zinc-400"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-6 w-6"
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </a>
+
+          <p
+            id="lyssna"
+            className="mt-4 text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500"
+          >
+            Lyssna
           </p>
         </header>
 

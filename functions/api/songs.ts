@@ -30,24 +30,34 @@ interface CreditRow {
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   try {
-    // One canonical recording per song: the most recently added one.
+    // One canonical recording per song: the explicit primary recording when one
+    // is flagged, otherwise the most recently added one.
     const songsResult = await context.env.DB.prepare(
       `SELECT s.id, s.title, s.artist, s.lyrics_by, s.music_by, s.lyrics, s.sheet_music_path,
               r.id AS recording_id,
               r.album, r.studio, r.year, r.engineer, r.mp3_path, r.wav_path, r.cover_path, r.play_count
        FROM songs s
        LEFT JOIN recordings r ON r.id = (
-         SELECT r2.id FROM recordings r2 WHERE r2.song_id = s.id ORDER BY r2.id DESC LIMIT 1
+         SELECT r2.id FROM recordings r2 WHERE r2.song_id = s.id
+         ORDER BY r2.is_primary DESC, r2.id DESC LIMIT 1
        )
        ORDER BY r.year DESC, s.title COLLATE NOCASE`
     ).all<SongRow>();
 
+    // Credits are scoped to the same canonical recording as the file paths, so
+    // the list always describes the recording that is actually played. The
+    // canonical-recording rule must stay identical to the one in the song query
+    // above.
     const creditsResult = await context.env.DB.prepare(
       `SELECT r.song_id AS song_id, m.name AS musician, rc.instrument AS instrument
        FROM recording_credits rc
        JOIN recordings r ON r.id = rc.recording_id
        JOIN musicians m ON m.id = rc.musician_id
-       ORDER BY r.song_id, m.name, rc.instrument`
+       WHERE r.id = (
+         SELECT r2.id FROM recordings r2 WHERE r2.song_id = r.song_id
+         ORDER BY r2.is_primary DESC, r2.id DESC LIMIT 1
+       )
+       ORDER BY r.song_id, m.name COLLATE NOCASE, rc.instrument`
     ).all<CreditRow>();
 
     const creditsBySong = new Map<
