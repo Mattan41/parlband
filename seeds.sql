@@ -1,5 +1,5 @@
 -- ============================================================================
--- 1. MUSIKER
+-- 1. MUSICIANS
 -- ============================================================================
 INSERT INTO musicians (id, name) VALUES
   (1, 'Mats Kruskopf Eriksson'),
@@ -7,7 +7,7 @@ INSERT INTO musicians (id, name) VALUES
   (3, 'Örjan Ahnoff');
 
 -- ============================================================================
--- 2. LÅTAR (Det abstrakta verket)
+-- 2. SONGS (the abstract work)
 -- ============================================================================
 INSERT INTO songs (id, title, artist, lyrics_by, music_by, lyrics, sheet_music_path) VALUES
   ('fri', 'Fri', 'Pärlband', 'Nova Kruskopf Eriksson', 'Nova Kruskopf Eriksson', NULL, NULL),
@@ -20,7 +20,7 @@ INSERT INTO songs (id, title, artist, lyrics_by, music_by, lyrics, sheet_music_p
   ('slaget-vid-poltava', 'Slaget vid Poltava', 'Pärlband', 'Nova Kruskopf Eriksson', 'Nova Kruskopf Eriksson', NULL, NULL);
 
 -- ============================================================================
--- 3. INSPELNINGAR (R2-filer & metadata)
+-- 3. RECORDINGS (R2 files & metadata)
 -- ============================================================================
 INSERT INTO recordings (song_id, album, studio, year, engineer, mp3_path, wav_path, cover_path, play_count) VALUES
   ('fri', NULL, 'Hemmastudio', 2023, NULL, 'fri.mp3', 'fri.wav', NULL, 0),
@@ -33,10 +33,10 @@ INSERT INTO recordings (song_id, album, studio, year, engineer, mp3_path, wav_pa
   ('slaget-vid-poltava', NULL, 'Hemmastudio', 2018, NULL, 'slaget-vid-poltava.mp3', 'slaget-vid-poltava.wav', NULL, 0);
 
 -- ============================================================================
--- 4. CREDITS (Exempel på hur du fyller på vem som gör vad per recording_id)
--- recording_id matchar ID:t i recordings (1 = Fri, 2 = Som en Legend, etc.)
+-- 4. CREDITS (example of how to fill in who does what per recording_id)
+-- recording_id matches the ID in recordings (1 = Fri, 2 = Som en Legend, etc.)
 -- ============================================================================
--- Exempel:
+-- Example:
 -- INSERT INTO recording_credits (recording_id, musician_id, instrument) VALUES
 --   (1, 2, 'Sång'),
 --   (1, 1, 'Akustisk gitarr'),
