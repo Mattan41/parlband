@@ -10,10 +10,12 @@ code.
 D1 (parlband-db)
   └─ functions/api/songs.ts   GET /api/songs   (raw rows + nested credits)
        └─ data/songs.ts       toSong(): row → Song + helper URLs
-            └─ app/page.tsx   fetches /api/songs on mount → <AudioPlayer>
-                 └─ functions/api/plays.ts  POST /api/plays
-                      (AudioPlayer increments recordings.play_count after
-                       5 s of continuous playback)
+            └─ app/page.tsx   fetches /api/songs on mount → <SongRow> list
+                 └─ store/playerStore.ts  global playback state (Zustand)
+                      └─ components/StickyPlayer.tsx  single <audio> element
+                           └─ functions/api/plays.ts  POST /api/plays
+                                (StickyPlayer increments recordings.play_count
+                                 after 5 s of continuous playback)
 ```
 
 The binding is defined in `wrangler.toml` and is named `DB`:
@@ -74,10 +76,11 @@ database_id = "b685ab25-61b7-4ebe-bc25-6a22bd8b2b99"
 - **Response:** `{ "success": true, "play_count": <new value> }`.
 - **Errors:** `400` if `recording_id` is missing/invalid, `404` if no row
   matches, `500` on unexpected errors.
-- **Call site:** `components/AudioPlayer.tsx` only sends the request after 5
+- **Call site:** `components/StickyPlayer.tsx` only sends the request after 5
   seconds of **continuous** playback. Pausing cancels the timer, switching
   tracks before 5 s does not count, and the same listening is counted only once
-  (a replay after the track has finished counts as a new listening).
+  (a replay after the track has finished counts as a new listening, including
+  when the same song plays again from the queue).
 
 ## URLs and R2
 

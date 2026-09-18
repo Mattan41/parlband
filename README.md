@@ -7,6 +7,7 @@ A static music website for the band Pärlband, built with Next.js static export 
 - [Next.js](https://nextjs.org) (static export)
 - [TypeScript](https://www.typescriptlang.org/)
 - [Tailwind CSS](https://tailwindcss.com/)
+- [Zustand](https://zustand.docs.pmnd.rs/) (global player state)
 
 ## Getting Started
 

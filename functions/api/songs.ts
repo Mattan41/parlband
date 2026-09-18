@@ -39,7 +39,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
        LEFT JOIN recordings r ON r.id = (
          SELECT r2.id FROM recordings r2 WHERE r2.song_id = s.id ORDER BY r2.id DESC LIMIT 1
        )
-       ORDER BY s.title COLLATE NOCASE`
+       ORDER BY r.year DESC, s.title COLLATE NOCASE`
     ).all<SongRow>();
 
     const creditsResult = await context.env.DB.prepare(

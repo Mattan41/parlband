@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import AudioPlayer from "@/components/AudioPlayer";
-import { toSong, type Song, type SongRow } from "@/data/songs";
+import SongRow from "@/components/SongRow";
+import StickyPlayer from "@/components/StickyPlayer";
+import { toSong, type Song, type SongRow as SongRowData } from "@/data/songs";
 import Image from "next/image";
 
 export default function Home() {
@@ -18,7 +19,7 @@ export default function Home() {
         if (!response.ok) {
           throw new Error(`Failed to load songs: ${response.status}`);
         }
-        return response.json() as Promise<SongRow[]>;
+        return response.json() as Promise<SongRowData[]>;
       })
       .then((rows) => {
         if (cancelled) return;
@@ -38,7 +39,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-1 flex-col items-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex w-full max-w-2xl flex-col gap-10 px-4 py-16">
+      <main className="flex w-full max-w-2xl flex-col gap-10 px-4 pt-16 pb-32">
         <header className="text-center">
           <h1 className="text-6xl font-bold tracking-tight text-zinc-900 sm:text-7xl dark:text-zinc-50">
             Pärlband
@@ -134,11 +135,13 @@ export default function Home() {
         ) : (
           <div className="space-y-6">
             {songs.map((song) => (
-              <AudioPlayer key={song.id} song={song} />
+              <SongRow key={song.id} song={song} />
             ))}
           </div>
         )}
       </main>
+
+      <StickyPlayer />
     </div>
   );
 }
