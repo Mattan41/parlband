@@ -35,7 +35,8 @@ export interface SongRow {
 }
 
 /**
- * UI-facing song model consumed by components/AudioPlayer.tsx.
+ * UI-facing song model consumed by the song list (components/SongRow.tsx) and
+ * the sticky player (components/StickyPlayer.tsx).
  * Adds helper URLs derived from the stored R2 paths.
  */
 export interface Song extends SongRow {
