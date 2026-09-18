@@ -6,12 +6,20 @@ import Image from "next/image";
 
 let currentlyPlayingAudio: HTMLAudioElement | null = null;
 
+/**
+ * Playback time (ms) that must elapse continuously before a play is counted.
+ * Pausing resets the timer; switching tracks cancels it.
+ */
+const PLAY_THRESHOLD_MS = 5000;
+
 export default function AudioPlayer({ song }: { song: Song }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [prevSrc, setPrevSrc] = useState(song.src);
+  // Guards against counting the same listening more than once.
+  const hasCountedRef = useRef(false);
 
   // Reset the playback UI when the track changes. Adjusting state during
   // render (instead of in an effect) is the pattern recommended by the React
@@ -56,6 +64,8 @@ export default function AudioPlayer({ song }: { song: Song }) {
   const handleEnded = () => {
     setIsPlaying(false);
     setCurrentTime(0);
+    // Replaying a finished track is a new listening.
+    hasCountedRef.current = false;
   };
 
   const handlePause = () => {
@@ -90,6 +100,32 @@ export default function AudioPlayer({ song }: { song: Song }) {
   useEffect(() => {
     audioRef.current?.load();
   }, [song.src]);
+
+  // -------- reset the play counter guard when the track changes ----------
+  useEffect(() => {
+    hasCountedRef.current = false;
+  }, [song.src]);
+
+  // -------- count a play after PLAY_THRESHOLD_MS of continuous playback ----------
+  useEffect(() => {
+    if (!isPlaying || hasCountedRef.current) return;
+    if (!song.src || song.recording_id == null) return;
+
+    const recordingId = song.recording_id;
+    const timer = setTimeout(() => {
+      hasCountedRef.current = true;
+      void fetch("/api/plays", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recording_id: recordingId }),
+      }).catch((error) => {
+        console.error("Failed to register play", error);
+      });
+    }, PLAY_THRESHOLD_MS);
+
+    // Pausing, switching tracks or unmounting cancels the pending count.
+    return () => clearTimeout(timer);
+  }, [isPlaying, song.src, song.recording_id]);
 
   // -------- formatting ----------
   const formatTime = (seconds: number) => {

@@ -1,69 +1,70 @@
-# Uppladdning av låtar till R2
+# Uploading songs to R2
 
 Bucket: `kruskopf-cdn`, prefix `parlband/`
 
-Här laddas **filerna** upp. **Metadata** (titel, textförfattare, filnamn,
-credits m.m.) ligger i D1 och läggs in separat – se
+This is where the **files** are uploaded. **Metadata** (title, lyricist, file
+names, credits, etc.) lives in D1 and is added separately – see
 [DATABASE.md](./DATABASE.md).
 
-## Viktigt
+## Important
 
-- Använd alltid `--remote`, annars laddas filen bara upp till Wrangler's
-  lokala testinstans (syns som "Resource location: local" i outputen)
-  och blir aldrig tillgänglig på https://cdn.kruskopf.org
-- WAV-filer måste ha `--content-disposition="attachment; filename=X.wav"`
-  annars spelar webbläsaren upp filen istället för att ladda ner den
-  (download-attributet i HTML fungerar bara same-origin)
-- MP3-filer behöver INGEN content-disposition (de ska streamas i spelaren)
-- Filnamn: rena ASCII, inga mellanslag eller å/ä/ö
+- Always use `--remote`, otherwise the file is only uploaded to Wrangler's
+  local test instance (shown as "Resource location: local" in the output)
+  and never becomes available at https://cdn.kruskopf.org
+- WAV files must have `--content-disposition="attachment; filename=X.wav"`,
+  otherwise the browser plays the file instead of downloading it
+  (the `download` attribute in HTML only works same-origin)
+- MP3 files need NO content-disposition (they are meant to be streamed in the player)
+- File names: pure ASCII, no spaces or å/ä/ö
 
-## Ladda upp en ny låt
+## Uploading a new song
 
 ```bash
 # MP3 (streaming)
-wrangler r2 object put kruskopf-cdn/parlband/mp3/NAMN.mp3 \
-  --file=./NAMN.mp3 --remote
+wrangler r2 object put kruskopf-cdn/parlband/mp3/NAME.mp3 \
+  --file=./NAME.mp3 --remote
 
-# WAV (nedladdning)
-wrangler r2 object put kruskopf-cdn/parlband/wav/NAMN.wav \
-  --file=./NAMN.wav \
-  --content-disposition="attachment; filename=NAMN.wav" \
+# WAV (download)
+wrangler r2 object put kruskopf-cdn/parlband/wav/NAME.wav \
+  --file=./NAME.wav \
+  --content-disposition="attachment; filename=NAME.wav" \
   --remote
 ```
 
-## Cover och noter
+## Cover and sheet music
 
 ```bash
-# Cover (valfritt) – används av cover_path
-wrangler r2 object put kruskopf-cdn/parlband/images/NAMN.jpg \
-  --file=./NAMN.jpg --remote
+# Cover (optional) – used by cover_path
+wrangler r2 object put kruskopf-cdn/parlband/images/NAME.jpg \
+  --file=./NAME.jpg --remote
 
-# Noter/ackord som PDF (valfritt) – sheet_music_path är en relativ sökväg i R2
-wrangler r2 object put kruskopf-cdn/parlband/pdf/NAMN.pdf \
-  --file=./NAMN.pdf --remote
+# Sheet music/chords as PDF (optional) – sheet_music_path is a relative path in R2
+wrangler r2 object put kruskopf-cdn/parlband/pdf/NAME.pdf \
+  --file=./NAME.pdf --remote
 ```
 
-Låt `cover_path` / `sheet_music_path` vara `NULL` om filen inte finns.
-För `cover_path` bygger appen URL:en `.../parlband/images/<cover_path>`;
-`sheet_music_path` är bara metadata än så länge (ingen URL byggs i koden).
+Leave `cover_path` / `sheet_music_path` as `NULL` if the file does not exist.
+For `cover_path` the app builds the URL `.../parlband/images/<cover_path>`;
+`sheet_music_path` is metadata only for now (no URL is built in the code).
 
-## Verifiera
+## Verify
 
 ```bash
-curl -I https://cdn.kruskopf.org/parlband/wav/NAMN.wav
+curl -I https://cdn.kruskopf.org/parlband/wav/NAME.wav
 ```
 
-Kolla att svaret är `200` och innehåller `content-disposition: attachment; filename=NAMN.wav`.
+Check that the response is `200` and contains `content-disposition: attachment; filename=NAME.wav`.
 
-## Om `wrangler login` ger CSRF-fel
+## If `wrangler login` gives a CSRF error
 
-Kör `wrangler login` från en mapp utanför projektet (t.ex. `~/Downloads`) —
-löste problemet senast, troligen pga port-/config-krock med projektmappen.
+Run `wrangler login` from a folder outside the project (e.g. `~/Downloads`) —
+that solved the problem last time, probably due to a port/config clash with the
+project folder.
 
-## Lägg in låten i D1
+## Add the song to D1
 
-En ny låt syns först när raden finns i D1. Kör mot remote när filerna är
-uppladdade:
+A new song only shows up once the row exists in D1. Run against remote when the
+files are uploaded:
 
 ```bash
 wrangler d1 execute parlband-db --remote --command="
@@ -75,10 +76,10 @@ VALUES ('ny-lat', NULL, 'Hemmastudio', 2026, NULL, 'ny-lat.mp3', 'ny-lat.wav', N
 "
 ```
 
-- `id` är sluggen som används i `mp3_path` / `wav_path` – håll dem i synk.
-- Upprepa inte `INSERT`-en för en låt som redan finns; använd `UPDATE` eller
-  radera raden först.
-- Credits är valfria och kräver att musikern finns i `musicians`:
+- `id` is the slug used in `mp3_path` / `wav_path` – keep them in sync.
+- Do not repeat the `INSERT` for a song that already exists; use `UPDATE` or
+  delete the row first.
+- Credits are optional and require the musician to exist in `musicians`:
 
 ```bash
 wrangler d1 execute parlband-db --remote --command="
@@ -89,13 +90,13 @@ WHERE r.song_id = 'ny-lat' AND m.name = 'Mats Kruskopf Eriksson';
 "
 ```
 
-## Verifiera i appen
+## Verify in the app
 
 ```bash
 npm run preview
 curl -s http://localhost:8788/api/songs | grep -o '"id":"ny-lat"'
 ```
 
-Får du ingen träff: kontrollera att låten har en `recordings`-rad med
-`mp3_path` – låtar utan mp3 filtreras bort i frontend. Se
-[DATABASE.md](./DATABASE.md) för dataflöde och kommandon.
+No match? Check that the song has a `recordings` row with `mp3_path` – songs
+without an mp3 are filtered out in the frontend. See
+[DATABASE.md](./DATABASE.md) for the data flow and commands.

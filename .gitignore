@@ -41,13 +41,13 @@ next-env.d.ts
 # ESLint
 .eslintcache
 
-# Vercel (harmless to keep även om du kör Cloudflare Pages)
+# Vercel (harmless to keep even if you run Cloudflare Pages)
 .vercel
 
 # Local files
 docs/local/
 
-# Wranlger
+# Wrangler
 .wrangler/
 .wrangler.*
 .cloudflare/

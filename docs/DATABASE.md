@@ -1,19 +1,22 @@
-# Databas & dataflöde (Cloudflare D1)
+# Database & data flow (Cloudflare D1)
 
-All låtdata kommer från D1-databasen `parlband-db`. Den läses av en Pages
-Function och skickas som JSON till frontend – det finns ingen statisk
-låtlista i koden.
+All song data comes from the D1 database `parlband-db`. It is read by a Pages
+Function and sent as JSON to the frontend – there is no static song list in the
+code.
 
-## Dataflöde
+## Data flow
 
 ```
 D1 (parlband-db)
-  └─ functions/api/songs.ts   GET /api/songs  (rå rader + nästlade credits)
-       └─ data/songs.ts       toSong(): rad → Song + hjälp-URL:er
-            └─ app/page.tsx   hämtar /api/songs vid mount → <AudioPlayer>
+  └─ functions/api/songs.ts   GET /api/songs   (raw rows + nested credits)
+       └─ data/songs.ts       toSong(): row → Song + helper URLs
+            └─ app/page.tsx   fetches /api/songs on mount → <AudioPlayer>
+                 └─ functions/api/plays.ts  POST /api/plays
+                      (AudioPlayer increments recordings.play_count after
+                       5 s of continuous playback)
 ```
 
-Bindningen definieras i `wrangler.toml` och heter `DB`:
+The binding is defined in `wrangler.toml` and is named `DB`:
 
 ```toml
 [[d1_databases]]
@@ -22,86 +25,110 @@ database_name = "parlband-db"
 database_id = "b685ab25-61b7-4ebe-bc25-6a22bd8b2b99"
 ```
 
-## Tabeller
+## Tables
 
-- **songs** – Det abstrakta musikaliska verket.
-  - `id`: Slug/ID (t.ex. 'fri').
-  - `title`: Låttitel.
-  - `artist`: Huvudartist/band (t.ex. 'Pärlband').
-  - `lyrics_by`: Textförfattare.
-  - `music_by`: Kompositör.
-  - `lyrics`: Själva sångtexten (ren text med radbrytningar).
-  - `sheet_music_path`: Relativ sökväg till noter/ackord i PDF-format i R2 (valfri).
+- **songs** – The abstract musical work.
+  - `id`: Slug/ID (e.g. 'fri').
+  - `title`: Song title.
+  - `artist`: Main artist/band (e.g. 'Pärlband').
+  - `lyrics_by`: Lyricist.
+  - `music_by`: Composer.
+  - `lyrics`: The lyrics themselves (plain text with line breaks).
+  - `sheet_music_path`: Relative path to sheet music/chords as a PDF in R2 (optional).
 
-- **recordings** – En specifik inspelningsversion av en låt.
+- **recordings** – A specific recorded version of a song.
   - `id`: Autoincrement, `song_id` → `songs.id`.
-  - `album`, `studio`, `year`, `engineer`, `notes`: Teknisk metadata.
-  - `mp3_path`, `wav_path`, `cover_path`: Filnamn i R2 (se [UPLOADING.md](./UPLOADING.md)).
-  - `play_count`: Antal spelningar.
+  - `album`, `studio`, `year`, `engineer`, `notes`: Technical metadata.
+  - `mp3_path`, `wav_path`, `cover_path`: File names in R2 (see [UPLOADING.md](./UPLOADING.md)).
+  - `play_count`: Number of plays.
 
-- **musicians** – Register över medverkande musiker (`id`, `name`).
+- **musicians** – Registry of contributing musicians (`id`, `name`).
 
-- **recording_credits** – Kopplingstabell för vem som spelade vilket instrument på en given inspelning (`recording_id`, `musician_id`, `instrument`).
+- **recording_credits** – Join table for who played which instrument on a given recording (`recording_id`, `musician_id`, `instrument`).
 
-- **d1_migrations** – Skapas och sköts av Wrangler. Redigera inte manuellt.
+- **d1_migrations** – Created and managed by Wrangler. Do not edit manually.
 
-## API-svaret
+## The API response
 
-`GET /api/songs` returnerar en array med ett objekt per låt:
+`GET /api/songs` returns an array with one object per song:
 
-`id`, `title`, `artist`, `lyrics_by`, `music_by`, `lyrics`, `sheet_music_path`,
-`album`, `studio`, `year`, `engineer`, `mp3_path`, `wav_path`, `cover_path`,
-`play_count` samt `credits: Array<{ musician, instrument }>`.
+`id`, `recording_id`, `title`, `artist`, `lyrics_by`, `music_by`, `lyrics`,
+`sheet_music_path`, `album`, `studio`, `year`, `engineer`, `mp3_path`,
+`wav_path`, `cover_path`, `play_count` and
+`credits: Array<{ musician, instrument }>`.
 
-- Varje låt kopplas till sin **senaste** inspelning (`ORDER BY r2.id DESC LIMIT 1`),
-  så en framtida remaster blir den som visas utan att verksdatan ändras.
-- `credits` slås ihop per låt från låtens inspelningar och sorteras på musiker.
+- Each song is linked to its **latest** recording (`ORDER BY r2.id DESC LIMIT 1`),
+  so a future remaster becomes the one displayed without changing the work data.
+- `credits` is merged per song from the song's recordings and sorted by musician.
+- `recording_id` is the `recordings.id` of the exact recording that
+  `mp3_path`/`wav_path` come from (the same subquery row). This is the id sent to
+  `POST /api/plays`. If a song ever displays multiple recordings at the same
+  time, a single `recording_id` per `Song` is no longer sufficient – see the
+  comment in `toSong()`.
 
-## URL:er och R2
+## Plays: POST /api/plays
 
-Klienten bygger fullständiga URL:er utifrån filnamnen. Basen kommer från
-`NEXT_PUBLIC_AUDIO_BASE_URL` (t.ex. `https://cdn.kruskopf.org`).
+`functions/api/plays.ts` increments `recordings.play_count` by 1.
 
-| Kolumn i D1        | Byggs i `toSong()` till                                                 |
+- **Body:** `{ "recording_id": number }` (positive integer).
+- **Response:** `{ "success": true, "play_count": <new value> }`.
+- **Errors:** `400` if `recording_id` is missing/invalid, `404` if no row
+  matches, `500` on unexpected errors.
+- **Call site:** `components/AudioPlayer.tsx` only sends the request after 5
+  seconds of **continuous** playback. Pausing cancels the timer, switching
+  tracks before 5 s does not count, and the same listening is counted only once
+  (a replay after the track has finished counts as a new listening).
+
+## URLs and R2
+
+The client builds full URLs from the file names. The base comes from
+`NEXT_PUBLIC_AUDIO_BASE_URL` (e.g. `https://cdn.kruskopf.org`).
+
+| Column in D1       | Built in `toSong()` to                                                  |
 | ------------------ | ----------------------------------------------------------------------- |
 | `mp3_path`         | `${NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/mp3/<mp3_path>` → `src`         |
 | `wav_path`         | `${NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/wav/<wav_path>` → `downloadSrc` |
 | `cover_path`       | `${NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/images/<cover_path>` → `cover`  |
-| `sheet_music_path` | Ingen URL byggs ännu (ingen UI använder den)                            |
+| `sheet_music_path` | No URL is built yet (nothing in the UI uses it)                         |
 
-Saknas `wav_path` utelämnas nedladdningsknappen, och låtar utan `mp3_path`
-filtreras bort i frontend.
+If `wav_path` is missing the download button is omitted, and songs without
+`mp3_path` are filtered out in the frontend.
 
-## Vanliga kommandon
+## Common commands
 
-### Lokalt
+### Locally
 
 ```bash
-npm run preview     # next build + wrangler pages dev out (kör /api/songs lokalt)
+npm run preview     # next build + wrangler pages dev out (runs /api/songs locally)
 npm run dev:d1      # next dev (3000) + wrangler pages dev (8788, proxy) – HMR + Functions
-npm run db:migrate  # applicera nya filer i migrations/ på den lokala databasen
-npm run db:reset    # nollställ lokal D1 och kör om schema + seeds.sql
+npm run db:migrate  # apply new files in migrations/ to the local database
+npm run db:reset    # reset local D1 and re-run schema + seeds.sql
 ```
 
-- `npm run dev` (bara `next dev`) serverar **inte** `/api/songs` – sidan visar
-  då felmeddelandet i stället för låtlistan. Använd `preview` eller `dev:d1`.
-- `db:reset` raderar `.wrangler/state/v3/d1` och bygger upp databasen på nytt.
-  `seeds.sql` använder vanliga `INSERT` och kan därför bara köras en gång mot
-  en tom databas.
+- `npm run dev` (just `next dev`) does **not** serve `/api/songs` – the page then
+  shows the error message instead of the song list. Use `preview` or `dev:d1`.
+- `db:reset` deletes `.wrangler/state/v3/d1` and rebuilds the database from
+  scratch. `seeds.sql` uses plain `INSERT`s and can therefore only be run once
+  against an empty database.
 
-### Mot remote (produktion)
+### Against remote (production)
 
 ```bash
 wrangler d1 execute parlband-db --remote --command="SELECT id, title FROM songs"
 wrangler d1 migrations apply parlband-db --remote
 ```
 
-Använd alltid `--remote` för produktionsdata – utan flaggan hamnar ändringen i
-den lokala testdatabasen.
+Always use `--remote` for production data – without the flag the change lands in
+the local test database.
 
-## Principer
+## Principles
 
-- **Sångtext (`lyrics`)** ligger på `songs` då texten hör till låten oavsett inspelning.
-- **Noter/ackord (`sheet_music_path`)** länkas som färdiga PDF-filer lagrade i R2 istället för råtext i databasen för att garantera perfekt typografi och formatering.
-- **Filer & Spelningar** ligger på `recordings` så att framtida remasters eller liveversioner inte rör verksdatan.
-- **Scheman versioneras** med SQL-filer i `migrations/`, inte genom manuella ändringar i Cloudflare-dashboarden.
+- **Lyrics (`lyrics`)** live on `songs`, since the text belongs to the song
+  regardless of recording.
+- **Sheet music/chords (`sheet_music_path`)** are linked as finished PDF files
+  stored in R2 instead of raw text in the database, to guarantee perfect
+  typography and formatting.
+- **Files & recordings** live on `recordings`, so future remasters or live
+  versions do not touch the work data.
+- **Schemas are versioned** with SQL files in `migrations/`, not through manual
+  changes in the Cloudflare dashboard.
