@@ -4,6 +4,7 @@ import Image from "next/image";
 import type { Song } from "@/data/songs";
 import { usePlayerStore } from "@/store/playerStore";
 import { formatSongCredits } from "./songCredits";
+import { iconButtonClass } from "./iconButton";
 
 /**
  * A single song in the landing-page list. It does not play audio itself: the
@@ -67,8 +68,9 @@ export default function SongRow({ song }: { song: Song }) {
         {/* play button */}
         <button
           onClick={() => playSong(song)}
-          aria-label="Play"
-          className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200 transition hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600"
+          title="Spela upp"
+          aria-label="Spela upp"
+          className={iconButtonClass}
         >
           <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16">
             <polygon points="4,2 14,8 4,14" />
@@ -78,8 +80,9 @@ export default function SongRow({ song }: { song: Song }) {
         {/* add to queue button */}
         <button
           onClick={() => addToQueue(song)}
-          aria-label="Add to queue"
-          className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200 transition hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600"
+          title="Lägg till i spellista"
+          aria-label="Lägg till i spellista"
+          className={iconButtonClass}
         >
           <svg
             className="h-4 w-4"
@@ -98,8 +101,9 @@ export default function SongRow({ song }: { song: Song }) {
           <a
             href={song.downloadSrc}
             download
-            aria-label="Download"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200 transition hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600"
+            title="Ladda ned"
+            aria-label="Ladda ned"
+            className={iconButtonClass}
           >
             <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16">
               <path d="M7.293 11.293a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L9 8.086V2.005a1 1 0 00-2 0v6.08L5.707 6.88a1 1 0 10-1.414 1.414l3 3z" />

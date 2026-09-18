@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { usePlayerStore } from "@/store/playerStore";
 import { formatSongCredits } from "./songCredits";
+import { iconButtonClass, iconButtonDisabledClass } from "./iconButton";
 
 /**
  * Playback time (ms) that must elapse continuously before a play is counted.
@@ -170,8 +171,9 @@ export default function StickyPlayer() {
               </span>
               <button
                 onClick={() => removeFromQueue(index)}
-                aria-label={`Remove ${queued.title} from queue`}
-                className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-zinc-500 transition hover:bg-zinc-200 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-100"
+                title="Ta bort från spellistan"
+                aria-label={`Ta bort ${queued.title} från spellistan`}
+                className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-zinc-500 transition hover:scale-105 hover:bg-zinc-200 hover:text-zinc-900 active:scale-95 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-100"
               >
                 <svg
                   className="h-3.5 w-3.5"
@@ -211,8 +213,9 @@ export default function StickyPlayer() {
             {/* play/pause button */}
             <button
               onClick={togglePlay}
-              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-200 transition hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600"
-              aria-label={isPlaying ? "Pause" : "Play"}
+              title={isPlaying ? "Pausa" : "Spela upp"}
+              aria-label={isPlaying ? "Pausa" : "Spela upp"}
+              className={`${iconButtonClass} shrink-0`}
             >
               {isPlaying ? (
                 // pause icon
@@ -243,7 +246,8 @@ export default function StickyPlayer() {
               max={duration || 0}
               value={currentTime}
               onChange={seek}
-              aria-label="Seek"
+              title="Position"
+              aria-label="Position"
               className="h-1 flex-1 cursor-pointer appearance-none rounded-full bg-zinc-300 dark:bg-zinc-600"
             />
 
@@ -258,8 +262,9 @@ export default function StickyPlayer() {
         <button
           onClick={playNext}
           disabled={queue.length === 0}
-          aria-label="Next"
-          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-200 transition hover:bg-zinc-300 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-700 dark:hover:bg-zinc-600"
+          title="Spela nästa"
+          aria-label="Spela nästa"
+          className={`${iconButtonClass} ${iconButtonDisabledClass} shrink-0`}
         >
           <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16">
             <polygon points="3,2 11,8 3,14" />
@@ -270,9 +275,10 @@ export default function StickyPlayer() {
         {/* queue toggle */}
         <button
           onClick={() => setQueueOpen((open) => !open)}
-          aria-label="Queue"
+          title="Spellista"
+          aria-label="Spellista"
           aria-expanded={queueOpen}
-          className="relative inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-200 transition hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600"
+          className={`${iconButtonClass} relative shrink-0`}
         >
           <svg
             className="h-4 w-4"
