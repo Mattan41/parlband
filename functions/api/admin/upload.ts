@@ -1,7 +1,7 @@
 /** Song id slug: lowercase ASCII words separated by single hyphens. */
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-type UploadKind = "mp3" | "wav" | "cover";
+type UploadKind = "mp3" | "wav" | "cover" | "pdf";
 
 interface UploadKindConfig {
   /** R2 key prefix, matching the existing parlband/ convention. */
@@ -51,6 +51,13 @@ const KIND_CONFIG: Record<UploadKind, UploadKindConfig> = {
       "image/gif",
     ],
   },
+  pdf: {
+    prefix: "parlband/pdf",
+    extension: "pdf",
+    // Sheet music/chords are small, print-ready documents.
+    maxBytes: 20 * 1024 * 1024,
+    contentTypes: ["application/pdf"],
+  },
 };
 
 const IMAGE_EXTENSIONS: Record<string, string> = {
@@ -69,7 +76,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const url = new URL(context.request.url);
   const kindParam = url.searchParams.get("kind") ?? "";
   if (!(kindParam in KIND_CONFIG)) {
-    return badRequest("kind must be one of: mp3, wav, cover");
+    return badRequest("kind must be one of: mp3, wav, cover, pdf");
   }
   const kind = kindParam as UploadKind;
   const config = KIND_CONFIG[kind];
@@ -122,6 +129,19 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const key = `${config.prefix}/${fileName}`;
 
   try {
+    // A PDF belongs to the song itself (`sheet_music_path` lives on songs), so
+    // validate that row before storing anything and leaving an orphan object.
+    if (kind === "pdf") {
+      const song = await context.env.DB.prepare(
+        `SELECT id FROM songs WHERE id = ?`
+      )
+        .bind(songId)
+        .first<{ id: string }>();
+      if (!song) {
+        return Response.json({ error: "Song not found" }, { status: 404 });
+      }
+    }
+
     if (recordingId !== null) {
       const recording = await context.env.DB.prepare(
         `SELECT id FROM recordings WHERE id = ?`
@@ -145,9 +165,16 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     const object = await context.env.CDN.put(key, body, { httpMetadata });
 
-    // When a recording is given, point its column at the freshly stored file so
-    // the admin UI does not have to save the path separately.
-    if (recordingId !== null) {
+    // Point the stored file at its metadata row so the admin UI does not have
+    // to save the path separately. PDFs go on the song (`sheet_music_path`),
+    // the audio/cover files go on the recording.
+    if (kind === "pdf") {
+      await context.env.DB.prepare(
+        `UPDATE songs SET sheet_music_path = ? WHERE id = ?`
+      )
+        .bind(fileName, songId)
+        .run();
+    } else if (recordingId !== null) {
       const column =
         kind === "mp3"
           ? "mp3_path"

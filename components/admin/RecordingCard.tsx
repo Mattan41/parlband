@@ -32,25 +32,28 @@ interface RecordingDraft {
   is_primary: boolean;
 }
 
-const PATH_FIELD: Record<AdminUploadKind, keyof RecordingDraft> = {
+/** Upload kinds attached to a recording; a PDF belongs to the song instead. */
+type RecordingUploadKind = Exclude<AdminUploadKind, "pdf">;
+
+const PATH_FIELD: Record<RecordingUploadKind, keyof RecordingDraft> = {
   mp3: "mp3_path",
   wav: "wav_path",
   cover: "cover_path",
 };
 
-const UPLOAD_LABEL: Record<AdminUploadKind, string> = {
+const UPLOAD_LABEL: Record<RecordingUploadKind, string> = {
   mp3: "MP3",
   wav: "WAV",
   cover: "omslag",
 };
 
-const UPLOAD_ACCEPT: Record<AdminUploadKind, string> = {
+const UPLOAD_ACCEPT: Record<RecordingUploadKind, string> = {
   mp3: "audio/mpeg,audio/mp3,.mp3",
   wav: "audio/wav,audio/x-wav,.wav",
   cover: "image/*",
 };
 
-const UPLOAD_KINDS: AdminUploadKind[] = ["mp3", "wav", "cover"];
+const UPLOAD_KINDS: RecordingUploadKind[] = ["mp3", "wav", "cover"];
 
 function toDraft(
   recording: AdminRecording | null,
@@ -180,7 +183,7 @@ export default function RecordingCard({
     }
   }
 
-  async function handleUpload(kind: AdminUploadKind, file: File) {
+  async function handleUpload(kind: RecordingUploadKind, file: File) {
     setUploading(kind);
     try {
       const result = await uploadAdminFile(

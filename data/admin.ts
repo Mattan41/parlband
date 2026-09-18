@@ -39,7 +39,7 @@ export interface AdminMusician {
   name: string;
 }
 
-export type AdminUploadKind = "mp3" | "wav" | "cover";
+export type AdminUploadKind = "mp3" | "wav" | "cover" | "pdf";
 
 /** CDN base URL, e.g. https://cdn.kruskopf.org. */
 export const AUDIO_BASE_URL = process.env.NEXT_PUBLIC_AUDIO_BASE_URL ?? "";
