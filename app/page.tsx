@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Hero from "@/components/home/Hero";
 import SongList from "@/components/home/SongList";
+import SiteNav from "@/components/SiteNav";
 import { toSong, type Song, type SongRow as SongRowData } from "@/data/songs";
 
 export default function Home() {
@@ -39,6 +40,7 @@ export default function Home() {
   return (
     <div className="flex flex-1 flex-col items-center bg-zinc-50 font-sans dark:bg-black">
       <main className="flex w-full max-w-2xl flex-col gap-6 px-4 pt-8 pb-32 sm:gap-10 sm:pt-16">
+        <SiteNav />
         <Hero />
         <SongList songs={songs} loading={loading} error={error} />
       </main>

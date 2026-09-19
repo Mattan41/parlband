@@ -70,6 +70,7 @@ npm run db:reset     # wipe local D1, re-apply the schema and seeds.sql
 app/                 App Router routes
   layout.tsx         root layout: fonts, metadata, <StickyPlayer>, SW registration
   page.tsx           / – fetches /api/songs → <Hero> + <SongList>
+  texter/page.tsx    /texter – lyrics & chords; deep-links via ?song=<id>
   admin/page.tsx     /admin – editor UI (Cloudflare Access)
   icon.png           app/favicon icon, served at /icon.png (rendered from public/pwa-icon.svg)
   robots.ts          /robots.txt (static export)
@@ -89,10 +90,11 @@ docs/                DATABASE.md, UPLOADING.md, ADMIN.md
 
 ## Routes
 
-| Route    | Description                                                |
-| -------- | ---------------------------------------------------------- |
-| `/`      | Landing page: hero, welcome card, song list, sticky player |
-| `/admin` | Admin/editor UI, protected by Cloudflare Access            |
+| Route     | Description                                                         |
+| --------- | ------------------------------------------------------------------- |
+| `/`       | Landing page: hero, welcome card, song list, sticky player          |
+| `/texter` | Lyrics & chords for songs that have lyrics; `?song=<id>` deep links |
+| `/admin`  | Admin/editor UI, protected by Cloudflare Access                     |
 
 ## PWA / installability
 
