@@ -1,0 +1,11 @@
+-- Public visibility per recording, separate from is_primary.
+--
+-- `is_primary` is a tiebreaker for WHICH recording the public API serves when a
+-- song has several; it does not decide whether a recording may be shown at all.
+-- Unchecking it on a song's only recording still leaves that take public.
+-- `is_public` answers "may this take be shown on the site?", so a
+-- work-in-progress take (or one the band never wants public) can be hidden
+-- without deleting it.
+--
+-- Default 1 keeps every existing recording visible, matching today's behaviour.
+ALTER TABLE recordings ADD COLUMN is_public INTEGER NOT NULL DEFAULT 1;

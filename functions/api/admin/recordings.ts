@@ -1,6 +1,6 @@
 /** Columns returned for a single recording. */
 const RECORDING_FIELDS = `id, song_id, album, studio, year, engineer, notes,
-  mp3_path, wav_path, cover_path, play_count, is_primary`;
+  mp3_path, wav_path, cover_path, play_count, is_primary, is_public`;
 
 interface RecordingRow {
   id: number;
@@ -15,6 +15,7 @@ interface RecordingRow {
   cover_path: string | null;
   play_count: number | null;
   is_primary: number;
+  is_public: number;
 }
 
 async function readJsonBody<T>(request: Request): Promise<T | null> {
@@ -55,6 +56,19 @@ function requiredInteger(value: unknown): number | undefined {
   return value;
 }
 
+/**
+ * Optional boolean with a fallback for missing values. Returns undefined only
+ * when a value is present but has the wrong type.
+ */
+function optionalBoolean(
+  value: unknown,
+  fallback: boolean
+): boolean | undefined {
+  if (value === undefined || value === null) return fallback;
+  if (typeof value !== "boolean") return undefined;
+  return value;
+}
+
 function badRequest(error: string): Response {
   return Response.json({ error }, { status: 400 });
 }
@@ -80,6 +94,7 @@ interface RecordingFields {
   wavPath: string | null;
   coverPath: string | null;
   isPrimary: boolean;
+  isPublic: boolean;
 }
 
 /** Validate the editable recording fields shared by POST and PUT. */
@@ -109,6 +124,14 @@ function parseRecordingFields(
   const year = nullableInteger(body.year);
   if (year === undefined) return { error: "year must be an integer or null" };
 
+  // Missing is_public defaults to public (the opposite of is_primary's
+  // default). That way a client which does not send the flag can never
+  // silently hide a recording from the public site.
+  const isPublic = optionalBoolean(body.is_public, true);
+  if (isPublic === undefined) {
+    return { error: "is_public must be a boolean" };
+  }
+
   return {
     fields: {
       album,
@@ -120,6 +143,7 @@ function parseRecordingFields(
       wavPath,
       coverPath,
       isPrimary: body.is_primary === true,
+      isPublic,
     },
   };
 }
@@ -154,8 +178,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const isPrimary = fields.isPrimary || (countRow?.count ?? 0) === 0;
 
     const insertStatement = context.env.DB.prepare(
-      `INSERT INTO recordings (song_id, album, studio, year, engineer, notes, mp3_path, wav_path, cover_path, play_count, is_primary)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`
+      `INSERT INTO recordings (song_id, album, studio, year, engineer, notes, mp3_path, wav_path, cover_path, play_count, is_primary, is_public)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`
     ).bind(
       songId,
       fields.album,
@@ -166,7 +190,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       fields.mp3Path,
       fields.wavPath,
       fields.coverPath,
-      isPrimary ? 1 : 0
+      isPrimary ? 1 : 0,
+      fields.isPublic ? 1 : 0
     );
 
     let newId: number;
@@ -219,7 +244,8 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     const updateStatement = context.env.DB.prepare(
       `UPDATE recordings
        SET album = ?, studio = ?, year = ?, engineer = ?, notes = ?,
-           mp3_path = ?, wav_path = ?, cover_path = ?, is_primary = ?
+           mp3_path = ?, wav_path = ?, cover_path = ?, is_primary = ?,
+           is_public = ?
        WHERE id = ?`
     ).bind(
       fields.album,
@@ -231,6 +257,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       fields.wavPath,
       fields.coverPath,
       fields.isPrimary ? 1 : 0,
+      fields.isPublic ? 1 : 0,
       id
     );
 

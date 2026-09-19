@@ -59,8 +59,13 @@ export default function SongSection({
     }
   }
 
+  // Summary recording: a public primary when one exists, otherwise any public
+  // recording, so a hidden take never represents the song in the header.
   const primary =
-    song.recordings.find((recording) => recording.is_primary === 1) ??
+    song.recordings.find(
+      (recording) => recording.is_public === 1 && recording.is_primary === 1
+    ) ??
+    song.recordings.find((recording) => recording.is_public === 1) ??
     song.recordings[0];
 
   return (

@@ -30,6 +30,7 @@ interface RecordingDraft {
   wav_path: string;
   cover_path: string;
   is_primary: boolean;
+  is_public: boolean;
 }
 
 /** Upload kinds attached to a recording; a PDF belongs to the song instead. */
@@ -69,6 +70,8 @@ function toDraft(
     wav_path: recording?.wav_path ?? "",
     cover_path: recording?.cover_path ?? "",
     is_primary: recording ? recording.is_primary === 1 : false,
+    // New recordings are visible on the site until the band hides them.
+    is_public: recording ? recording.is_public === 1 : true,
   };
 }
 
@@ -130,6 +133,7 @@ export default function RecordingCard({
       wav_path: draft.wav_path,
       cover_path: draft.cover_path,
       is_primary: draft.is_primary,
+      is_public: draft.is_public,
     };
   }
 
@@ -222,6 +226,7 @@ export default function RecordingCard({
         <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-300">
           {isNew ? "Ny inspelning" : `Inspelning #${recording.id}`}
           {!isNew && recording.is_primary === 1 ? " · huvudinspelning" : ""}
+          {!isNew && recording.is_public === 0 ? " · dold" : ""}
         </span>
         <span className="text-xs text-zinc-500 dark:text-zinc-400">
           {recording?.play_count ?? 0} spelningar (räknas automatiskt)
@@ -298,17 +303,44 @@ export default function RecordingCard({
         </label>
       </div>
 
-      <label className="mt-3 flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
-        <input
-          type="checkbox"
-          className="h-4 w-4 rounded border-zinc-300 text-amber-600 focus:ring-amber-500"
-          checked={draft.is_primary}
-          onChange={(event) =>
-            updateDraft({ is_primary: event.target.checked })
-          }
-        />
-        Huvudinspelning (den som den publika sidan spelar)
-      </label>
+      <fieldset className="mt-4 rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
+        <legend className={labelClass}>Synlighet</legend>
+
+        <label className="flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+          <input
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-amber-600 focus:ring-amber-500"
+            checked={draft.is_public}
+            onChange={(event) =>
+              updateDraft({ is_public: event.target.checked })
+            }
+          />
+          <span>
+            Publik (visas på hemsidan)
+            <span className="block text-xs text-zinc-500 dark:text-zinc-400">
+              Avmarkera för att dölja inspelningen på hemsidan. Inspelningen kan fortfarande spelas upp via direktlänk.
+            </span>
+          </span>
+        </label>
+
+        <label className="mt-3 flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+          <input
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-amber-600 focus:ring-amber-500"
+            checked={draft.is_primary}
+            onChange={(event) =>
+              updateDraft({ is_primary: event.target.checked })
+            }
+          />
+          <span>
+            Huvudinspelning
+            <span className="block text-xs text-zinc-500 dark:text-zinc-400">
+              Avgör vilken av de publika inspelningarna som spelas när flera
+              finns. Döljer ingenting i sig.
+            </span>
+          </span>
+        </label>
+      </fieldset>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {UPLOAD_KINDS.map((kind) => (

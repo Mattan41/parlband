@@ -71,10 +71,10 @@ function TexterView() {
     searchParams.get("song")
   );
   /**
-   * Chords are shown by default (the detail view has always rendered the text
-   * as-is); the toggle only affects rendering and is not persisted.
+   * Lyrics-only by default; the toggle reveals the chord/instruction lines.
+   * Purely a rendering preference and not persisted.
    */
-  const [showChords, setShowChords] = useState(true);
+  const [showChords, setShowChords] = useState(false);
 
   useEffect(() => {
     let cancelled = false;

@@ -24,6 +24,7 @@ interface RecordingRow {
   cover_path: string | null;
   play_count: number | null;
   is_primary: number;
+  is_public: number;
 }
 
 interface CreditRow {
@@ -84,7 +85,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     ).all<SongRow>();
 
     const recordingsResult = await context.env.DB.prepare(
-      `SELECT id, song_id, album, studio, year, engineer, notes, mp3_path, wav_path, cover_path, play_count, is_primary
+      `SELECT id, song_id, album, studio, year, engineer, notes, mp3_path, wav_path, cover_path, play_count, is_primary, is_public
        FROM recordings
        ORDER BY song_id, is_primary DESC, id`
     ).all<RecordingRow>();
