@@ -22,16 +22,22 @@ enforce it (expected, not a bug).
 - The **id (slug)** is derived from the title and is used in file names. It may
   only contain `a-z`, `0-9` and hyphens.
 - **Edit** any of the fields on an existing song and press "Spara låt".
-- A song only becomes **public** once it has a recording with an `mp3_path` –
-  `GET /api/songs` filters out songs without one.
+- A song only becomes **public** once it has a recording with an `mp3_path` that
+  is also marked **Publik** – `GET /api/songs` filters out songs without one.
 
 ## Recordings
 
 A song can have several recordings (e.g. studio + live).
 
 - Fields: album, studio, year, engineer, notes, mp3 path, wav path, cover path.
-- **Huvudinspelning** (`is_primary`): exactly one per song. This is the recording
-  the public site serves; setting the flag on one clears it on the others.
+- **Publik** (`is_public`): whether the recording may be shown on the site.
+  Uncheck it to hide a take (e.g. while re-recording) without deleting it. A
+  song whose only recording is hidden stops being playable publicly.
+- **Huvudinspelning** (`is_primary`): exactly one per song. Among the **public**
+  recordings it is the one the site serves; setting the flag on one clears it on
+  the others. It does **not** hide anything by itself – a recording can be
+  primary and still hidden, in which case the newest other public recording is
+  served instead.
 - **Play count** is derived automatically (after 5 s of continuous playback) and is
   never set through the UI.
 - **Delete** removes the row and its credits, but leaves the R2 files in the

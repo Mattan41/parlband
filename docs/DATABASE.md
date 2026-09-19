@@ -57,9 +57,13 @@ settings.
   - `mp3_path`, `wav_path`, `cover_path`: File names in R2 (see [UPLOADING.md](./UPLOADING.md)).
   - `play_count`: Number of plays. Derived counter – never set through the admin
     API.
-  - `is_primary`: `1` for the recording the public API serves for the song. A
-    song may have several recordings (e.g. studio + live); only the primary one
-    is exposed publicly. The admin API keeps exactly one primary per song.
+  - `is_primary`: `1` for the recording the public API serves when a song has
+    several **public** recordings (e.g. studio + live). It only breaks ties among
+    the public ones; the admin API keeps exactly one primary per song.
+  - `is_public`: `1` when the recording may be shown on the site, `0` when it is
+    hidden (e.g. a work-in-progress take). Independent of `is_primary`:
+    unchecking `is_primary` does not hide a recording, and a song whose only
+    recording is hidden is served without a playable file.
 
 - **musicians** – Registry of contributing musicians (`id`, `name`).
 
@@ -76,13 +80,15 @@ settings.
 `wav_path`, `cover_path`, `play_count` and
 `credits: Array<{ musician, instrument }>`.
 
-- Each song is linked to its **primary** recording
-  (`ORDER BY r2.is_primary DESC, r2.id DESC LIMIT 1`), so a future remaster
-  becomes the one displayed by flagging it as primary instead of relying on
-  insert order. When nothing is flagged the newest recording is used.
-- `credits` are scoped to that same primary recording and sorted by musician,
-  so the list always describes the recording that is actually played – not a
-  union of every recording of the song.
+- Each song is linked to its **primary public** recording
+  (`WHERE r2.is_public = 1 ORDER BY r2.is_primary DESC, r2.id DESC LIMIT 1`), so
+  a future remaster becomes the one displayed by flagging it as primary instead
+  of relying on insert order. When nothing is flagged the newest public
+  recording is used. A song with no public recording joins to nothing and gets
+  no playable file, which the landing page filters out.
+- `credits` are scoped to that same primary public recording and sorted by
+  musician, so the list always describes the recording that is actually played –
+  not a union of every recording of the song.
 - `recording_id` is the `recordings.id` of the exact recording that
   `mp3_path`/`wav_path` come from (the same subquery row). This is the id sent to
   `POST /api/plays`. If a song ever displays multiple recordings at the same
@@ -99,7 +105,7 @@ dev:d1` the admin routes are open – that is expected.
 | Endpoint                | Methods                 | Purpose                                                                                            |
 | ----------------------- | ----------------------- | -------------------------------------------------------------------------------------------------- |
 | `/api/admin/songs`      | `GET`, `POST`, `PUT`    | List every song with **all** its recordings and each recording's credits; create and update songs. |
-| `/api/admin/recordings` | `POST`, `PUT`, `DELETE` | Create a recording under a song, update one (including `is_primary`), or delete it.                |
+| `/api/admin/recordings` | `POST`, `PUT`, `DELETE` | Create a recording under a song, update one (including `is_primary`/`is_public`), or delete it.    |
 | `/api/admin/credits`    | `POST`, `DELETE`        | Add or remove a `(recording_id, musician_id, instrument)` row.                                     |
 | `/api/admin/musicians`  | `GET`, `POST`           | List musicians for the dropdown; create one by name (case-insensitive and idempotent).             |
 | `/api/admin/upload`     | `POST`                  | Proxy an mp3/wav/cover/pdf upload into R2 (see [UPLOADING.md](./UPLOADING.md)).                    |
