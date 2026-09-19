@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import ServiceWorkerRegistrar from "@/components/ServiceWorkerRegistrar";
 import StickyPlayer from "@/components/StickyPlayer";
 import "./globals.css";
 
@@ -22,11 +23,15 @@ export const metadata: Metadata = {
   title: "Pärlband",
   description: "Officiell hemsida för Pärlband – musik, låttexter och ackord.",
   metadataBase: new URL("https://parlband.kruskopf.org"),
+  manifest: "/manifest.json",
 
   icons: {
-    icon: [{ url: "/icon.png", type: "image/png" }],
+    icon: [
+      { url: "/icon.png", type: "image/png", sizes: "192x192" },
+      { url: "/icons/icon-512x512.png", type: "image/png", sizes: "512x512" },
+    ],
     shortcut: "/icon.png",
-    apple: "/icon.png",
+    apple: "/icons/icon-192x192.png",
   },
   openGraph: {
     title: "Pärlband",
@@ -45,6 +50,12 @@ export const metadata: Metadata = {
   },
 };
 
+// `themeColor` lives on the viewport export in Next 16, not in `metadata`.
+// Matches the PWA icon background so the mobile browser chrome blends in.
+export const viewport: Viewport = {
+  themeColor: "#18181b",
+};
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
@@ -55,6 +66,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {children}
         {/* App-wide player: mounted once here so audio survives route changes. */}
         <StickyPlayer />
+        {/* Registers the PWA service worker (production only, no UI). */}
+        <ServiceWorkerRegistrar />
       </body>
     </html>
   );

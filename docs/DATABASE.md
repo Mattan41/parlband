@@ -179,6 +179,11 @@ The client builds full URLs from the file names. The base comes from
 If `wav_path` is missing the download button is omitted, and songs without
 `mp3_path` are filtered out in the frontend.
 
+These CDN files are deliberately **excluded from the service worker cache** (see
+[PWA.md](./PWA.md)). The app shell works offline, but audio, WAV downloads and
+cover images are always fetched from R2, so a replaced file is never served stale
+by the app (the browser's own HTTP cache may still hold a copy).
+
 ## Common commands
 
 ### Locally

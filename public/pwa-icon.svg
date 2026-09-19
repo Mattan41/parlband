@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <!-- Bakgrundsplatta: Mörk antracit / nära svart för mjukare kontrast -->
+  <rect width="512" height="512" rx="112" fill="#18181b" />
+  
+  <!-- Stilrent, geometriskt och centrerat P -->
+  <path d="M 176 136 
+           L 296 136 
+           C 352 136, 384 168, 384 224 
+           C 384 280, 352 312, 296 312 
+           L 240 312 
+           L 240 376 
+           L 176 376 
+           Z 
+           M 240 196 
+           L 240 252 
+           L 290 252 
+           C 316 252, 328 242, 328 224 
+           C 328 206, 316 196, 290 196 
+           Z" 
+        fill="#f4f4f5" />
+</svg>
