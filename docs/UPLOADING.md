@@ -16,6 +16,9 @@ names, credits, etc.) lives in D1 and is added separately – see
   (the `download` attribute in HTML only works same-origin)
 - MP3 files need NO content-disposition (they are meant to be streamed in the player)
 - File names: pure ASCII, no spaces or å/ä/ö
+- The PWA service worker never caches `cdn.kruskopf.org` (`/parlband/mp3/`,
+  `/parlband/wav/`, images), so it can never serve a stale copy of a replaced
+  file – see [PWA.md](./PWA.md)
 
 ## Via the admin UI
 

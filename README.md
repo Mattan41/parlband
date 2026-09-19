@@ -19,6 +19,7 @@ There is no server-side Next.js runtime: `next build` emits static HTML/CSS/JS i
 - [TypeScript](https://www.typescriptlang.org/)
 - [Tailwind CSS](https://tailwindcss.com/) v4
 - [Zustand](https://zustand.docs.pmnd.rs/) (global player state)
+- PWA – hand-rolled web app manifest + service worker (installable, offline app shell)
 - Cloudflare Pages + Functions + D1 + R2
 
 ## Requirements
@@ -67,15 +68,21 @@ npm run db:reset     # wipe local D1, re-apply the schema and seeds.sql
 
 ```
 app/                 App Router routes
-  layout.tsx         root layout: fonts, metadata, <StickyPlayer>
+  layout.tsx         root layout: fonts, metadata, <StickyPlayer>, SW registration
   page.tsx           / – fetches /api/songs → <Hero> + <SongList>
   admin/page.tsx     /admin – editor UI (Cloudflare Access)
+  icon.png           app/favicon icon, served at /icon.png (rendered from public/pwa-icon.svg)
   robots.ts          /robots.txt (static export)
   sitemap.ts         /sitemap.xml (static export)
-components/          shared UI (SongRow, StickyPlayer) + home/ and admin/ features
+components/          shared UI (SongRow, StickyPlayer, ServiceWorkerRegistrar) + home/ and admin/ features
 data/                API types and helpers (songs.ts, admin.ts)
 store/               Zustand player state (playerStore.ts)
 functions/api/       Pages Functions: songs, plays, admin CRUD + upload
+public/
+  manifest.json      PWA web app manifest
+  sw.js              service worker (offline app shell; never caches the R2 CDN)
+  icons/             192/512 px PWA icons + maskable variant
+  pwa-icon.svg       vector source for the icons
 migrations/          versioned D1 schema
 docs/                DATABASE.md, UPLOADING.md, ADMIN.md
 ```
@@ -86,6 +93,23 @@ docs/                DATABASE.md, UPLOADING.md, ADMIN.md
 | -------- | ---------------------------------------------------------- |
 | `/`      | Landing page: hero, welcome card, song list, sticky player |
 | `/admin` | Admin/editor UI, protected by Cloudflare Access            |
+
+## PWA / installability
+
+The site is installable as a standalone app and keeps its app shell available
+offline. There is no `next-pwa` dependency: with the App Router and a static
+export, a hand-rolled `public/manifest.json` plus a small `public/sw.js` is
+simpler and more predictable than a plugin's caching heuristics. Registration is
+handled by `components/ServiceWorkerRegistrar.tsx` (production only).
+
+- **Cache-first** for the hashed app shell (`/_next/static/*`, icons, manifest).
+- **Network-first** for navigations, with a cached fallback when offline.
+- **Never cached:** `/api/*` and everything from the R2 CDN
+  (`cdn.kruskopf.org`, `/parlband/mp3/`, `/parlband/wav/`, cover images), so
+  replaced audio is never served stale.
+
+See [docs/PWA.md](docs/PWA.md) for the file map, the local testing checklist and
+how to re-render the icons.
 
 ## Environment
 
@@ -108,6 +132,7 @@ be configured under the project's settings.
 - [docs/DATABASE.md](docs/DATABASE.md) – schema, API response and data flow
 - [docs/UPLOADING.md](docs/UPLOADING.md) – R2 file conventions, CLI uploads, Access
 - [docs/ADMIN.md](docs/ADMIN.md) – what you can do in the admin UI
+- [docs/PWA.md](docs/PWA.md) – manifest, service worker, install/offline testing
 
 ## Deployment
 

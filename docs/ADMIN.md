@@ -53,7 +53,9 @@ separate save is needed for the file.
   song's **Låtinfo** section.
 - Uploading a file with the same name **replaces** the previous object. Because
   objects are cached as immutable, a replaced file may not show up in an open
-  player until the page is reloaded.
+  player until the page is reloaded. The PWA service worker does not cache these
+  CDN files, so it never serves a stale copy – only the browser's own HTTP cache
+  is involved.
 - **WAV** is served with `content-disposition: attachment` (a download); **MP3**
   streams and **PDF** opens inline in the browser's viewer.
 - The PDF is named `<song-id>.pdf` and the song row is updated automatically, so a
@@ -77,3 +79,4 @@ separate save is needed for the file.
 
 - [DATABASE.md](./DATABASE.md) – tables, API response and data flow
 - [UPLOADING.md](./UPLOADING.md) – R2 key conventions, CLI commands, Cloudflare Access
+- [PWA.md](./PWA.md) – app install, service worker caching and offline behavior
