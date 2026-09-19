@@ -4,6 +4,10 @@ import { Suspense, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import SiteNav from "@/components/SiteNav";
 import { formatSongCredits } from "@/components/songCredits";
+import {
+  filterLyricLines,
+  hasChordLines,
+} from "@/components/texter/lyricsLines";
 import { toSong, type Song, type SongRow as SongRowData } from "@/data/songs";
 
 /** Song with a guaranteed non-empty `lyrics` string. */
@@ -66,6 +70,11 @@ function TexterView() {
   const [selectedSongId, setSelectedSongId] = useState<string | null>(() =>
     searchParams.get("song")
   );
+  /**
+   * Chords are shown by default (the detail view has always rendered the text
+   * as-is); the toggle only affects rendering and is not persisted.
+   */
+  const [showChords, setShowChords] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -125,15 +134,33 @@ function TexterView() {
   }
 
   if (selectedSong) {
+    const showChordToggle = hasChordLines(selectedSong.lyrics);
+
     return (
       <article className="rounded-xl border border-zinc-200 bg-white p-4 shadow-md sm:p-6 dark:border-zinc-800 dark:bg-zinc-900">
-        <button
-          type="button"
-          onClick={clearSelection}
-          className="text-xs font-medium text-amber-700 underline underline-offset-4 transition hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300"
-        >
-          ← Alla texter
-        </button>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={clearSelection}
+            className="text-xs font-medium text-amber-700 underline underline-offset-4 transition hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300"
+          >
+            ← Alla texter
+          </button>
+
+          {/* Only offered when the song actually has chord/instruction lines. */}
+          {showChordToggle ? (
+            <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+              <input
+                type="checkbox"
+                role="switch"
+                className="h-4 w-4 rounded border-zinc-300 text-amber-600 focus:ring-amber-500"
+                checked={showChords}
+                onChange={(event) => setShowChords(event.target.checked)}
+              />
+              Visa ackord
+            </label>
+          ) : null}
+        </div>
 
         <h2 className="mt-3 text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
           {selectedSong.title}
@@ -142,11 +169,12 @@ function TexterView() {
           {formatSongCredits(selectedSong)}
         </p>
 
-        {/* Plain text on purpose: chords stay inline exactly as pasted, no
-            markdown or chord parsing yet. `whitespace-pre-wrap` keeps every
+        {/* Plain text on purpose: no markdown, and the chord/lyric
+            classification only decides which whole lines to hide. Inline
+            chords stay exactly as pasted. `whitespace-pre-wrap` keeps every
             line break and run of spaces while still wrapping long lines. */}
         <pre className="mt-4 whitespace-pre-wrap font-mono text-sm leading-relaxed text-zinc-800 dark:text-zinc-200">
-          {selectedSong.lyrics}
+          {filterLyricLines(selectedSong.lyrics, showChords)}
         </pre>
       </article>
     );
