@@ -62,6 +62,7 @@ npm run db:reset     # wipe local D1, re-apply the schema and seeds.sql
 | `npm run db:reset`   | Reset local D1 (schema + `seeds.sql`)                 |
 | `npm run lint`       | ESLint (`lint:fix` to autofix)                        |
 | `npm run format`     | Prettier (`format:check` to verify)                   |
+| `npm test`           | Vitest unit tests (`test:watch` for watch mode)       |
 | `npm run clean`      | Remove `.next`, `dist`, `out`, `build`                |
 
 ## Project Structure
@@ -79,13 +80,15 @@ components/          shared UI (SongRow, StickyPlayer, ServiceWorkerRegistrar) +
 data/                API types and helpers (songs.ts, admin.ts)
 store/               Zustand player state (playerStore.ts)
 functions/api/       Pages Functions: songs, plays, admin CRUD + upload
+  admin/_middleware.ts  Cloudflare Access JWT guard for /api/admin/*
 public/
   manifest.json      PWA web app manifest
   sw.js              service worker (offline app shell; never caches the R2 CDN)
   icons/             192/512 px PWA icons + maskable variant
   pwa-icon.svg       vector source for the icons
 migrations/          versioned D1 schema
-docs/                DATABASE.md, UPLOADING.md, ADMIN.md
+tests/               Vitest unit tests (admin Access JWT guard)
+docs/                DATABASE.md, UPLOADING.md, ADMIN.md, PWA.md
 ```
 
 ## Routes
@@ -115,9 +118,12 @@ how to re-render the icons.
 
 ## Environment
 
-| Variable                     | Used by            | Purpose                                       |
-| ---------------------------- | ------------------ | --------------------------------------------- |
-| `NEXT_PUBLIC_AUDIO_BASE_URL` | client + Functions | CDN base URL, e.g. `https://cdn.kruskopf.org` |
+| Variable                     | Used by            | Purpose                                                                                                   |
+| ---------------------------- | ------------------ | --------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_AUDIO_BASE_URL` | client + Functions | CDN base URL, e.g. `https://cdn.kruskopf.org`                                                             |
+| `CF_ACCESS_TEAM_DOMAIN`      | Functions          | Access team domain, e.g. `https://<team>.cloudflareaccess.com`; normalized and used as the expected `iss` |
+| `CF_ACCESS_AUD`              | Functions          | Access Application Audience (AUD) tag protecting `/admin*` + `/api/admin*`                                |
+| `NODE_ENV`                   | Functions (local)  | `development` in `.dev.vars` to skip JWT validation locally                                               |
 
 Cloudflare bindings, declared in `wrangler.toml` and typed in `functions/types.d.ts`:
 
@@ -128,6 +134,38 @@ Cloudflare bindings, declared in `wrangler.toml` and typed in `functions/types.d
 
 When deploying through the Cloudflare Pages dashboard, the same bindings must also
 be configured under the project's settings.
+
+`CF_ACCESS_TEAM_DOMAIN` and `CF_ACCESS_AUD` are set in `wrangler.toml` in **two**
+places, because `vars` is a
+[non-inheritable key](https://developers.cloudflare.com/pages/functions/wrangler-configuration/#non-inheritable-keys):
+the top-level `[vars]` covers local development and preview deployments, and
+`[env.production.vars]` covers production. Both carry the same values – there is
+only one Access application – and preview needs no `[env.preview]` block.
+
+### Admin API authentication
+
+Cloudflare Access is the primary gate for `/admin*` and `/api/admin*`. As defense
+in depth, `functions/api/admin/_middleware.ts` also validates the Access JWT on
+every `/api/admin/*` request (all routes in the directory, including
+subdirectories):
+
+- Token source: the `Cf-Access-Jwt-Assertion` header.
+- Verification: signature, issuer, audience and expiry via
+  `createRemoteJWKSet` + `jwtVerify` from [`jose`](https://github.com/panva/jose),
+  with `RS256` pinned. JWKS:
+  `https://<CF_ACCESS_TEAM_DOMAIN>/cdn-cgi/access/certs`.
+- On any failure the route never runs and the API returns
+  `401 { "error": "Unauthorized" }`. The token is never logged.
+- The verified identity is exposed to routes as `context.data.access.email`
+  (read it with `getAccessIdentity(context.data)?.email`) so a route can log who
+  made a change.
+
+Locally the guard is **skipped** only when both `NODE_ENV=development` and a
+`localhost` request URL are present – never because of a request header or query
+parameter. Copy `.dev.vars.example` to the git-ignored `.dev.vars` and use
+`http://localhost:8788`; a `127.0.0.1` URL is treated as remote and will return
+`401`. When `.dev.vars` exists, `wrangler pages dev` no longer loads `.env`, which
+is why the example repeats `NEXT_PUBLIC_AUDIO_BASE_URL`.
 
 ## Documentation
 
@@ -141,5 +179,13 @@ be configured under the project's settings.
 The site deploys as a static site on Cloudflare Pages, which picks up `functions/`
 automatically. `/admin*` and `/api/admin*` are protected by Cloudflare Access – both
 destinations are required, since protecting only the UI would leave the write
-endpoints open. Access runs at the edge and is therefore not enforced by local
-`wrangler pages dev` (expected, not a bug).
+endpoints open. Access runs at the edge, so it is not enforced by local
+`wrangler pages dev` (expected, not a bug); the app-level JWT check described in
+[Admin API authentication](#admin-api-authentication) is skipped there too.
+
+A single Access application covers production and preview deployments, so
+`CF_ACCESS_TEAM_DOMAIN` and `CF_ACCESS_AUD` have one set of values. They appear in
+both `[vars]` and `[env.production.vars]` in `wrangler.toml`; if the project is
+instead configured from the dashboard, set the same two variables for both the
+Preview and Production environments there – see
+[Environment](#environment).

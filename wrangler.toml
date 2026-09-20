@@ -2,8 +2,23 @@ name = "parlband"
 pages_build_output_dir = "out"
 compatibility_date = "2026-09-11"
 
+# `[vars]` applies to local development and preview deployments. Production
+# has its own `[env.production]` override further down, because `vars` is a
+# non-inheritable key – both blocks must carry the same values.
 [vars]
 NEXT_PUBLIC_AUDIO_BASE_URL = "https://cdn.kruskopf.org"
+
+# Cloudflare Access JWT validation for /api/admin/* (see
+# functions/api/admin/_middleware.ts). A single Access application covers both
+# production and preview deployments, so there is one set of values.
+#
+# CF_ACCESS_TEAM_DOMAIN is normalized to https://<team>.cloudflareaccess.com
+# and used both as the expected `iss` claim and as the base of the JWKS URL
+# (<team>/cdn-cgi/access/certs). A scheme-less value is accepted.
+CF_ACCESS_TEAM_DOMAIN = "https://knishopf.cloudflareaccess.com"
+# Application Audience (AUD) tag of the Access application that protects
+# /admin* and /api/admin*.
+CF_ACCESS_AUD = "e51606b0decca0046dd71a6f54510d47f78fd6d7dc3963a2b2615e8760d81096"
 
 [[d1_databases]]
 binding = "DB"
@@ -11,5 +26,23 @@ database_name = "parlband-db"
 database_id = "b685ab25-61b7-4ebe-bc25-6a22bd8b2b99"
 
 [[r2_buckets]]
+binding = "CDN"
+bucket_name = "kruskopf-cdn"
+
+# Production deployments read this override instead of the top-level values.
+# Because `vars`, `d1_databases` and `r2_buckets` are non-inheritable, every one
+# of them has to be repeated here. Keep the CF_ACCESS_* values identical to the
+# ones above – there is only one Access application.
+[env.production.vars]
+NEXT_PUBLIC_AUDIO_BASE_URL = "https://cdn.kruskopf.org"
+CF_ACCESS_TEAM_DOMAIN = "https://knishopf.cloudflareaccess.com"
+CF_ACCESS_AUD = "e51606b0decca0046dd71a6f54510d47f78fd6d7dc3963a2b2615e8760d81096"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "parlband-db"
+database_id = "b685ab25-61b7-4ebe-bc25-6a22bd8b2b99"
+
+[[env.production.r2_buckets]]
 binding = "CDN"
 bucket_name = "kruskopf-cdn"

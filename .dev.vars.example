@@ -1,0 +1,8 @@
+# Local Pages Functions environment, loaded by `wrangler pages dev`.
+# Copy this file to `.dev.vars` (git-ignored) and adjust the values.
+#
+# NODE_ENV=development lets the admin Access guard be skipped, but only
+# together with a localhost request URL (http://localhost:8788). Never set
+# NODE_ENV=development in a deployed environment.
+NODE_ENV=development
+NEXT_PUBLIC_AUDIO_BASE_URL=https://cdn.kruskopf.org
