@@ -97,8 +97,14 @@ settings.
     local time), so past gigs disappear from the site on their own while staying
     in the admin; the admin also relies on the ISO form for the "Passerat" badge.
   - `start_time`: optional 24-hour time (`HH:MM`).
+  - `title`: optional name of the gig itself (e.g. a festival). Shown in the
+    admin list and, when set, as the leading label on the landing page.
   - `venue`: required, e.g. a stage or a festival name.
-  - `city`, `ticket_url`, `info`: optional (the URL must be `http(s)`).
+  - `city`, `ticket_url`, `info`: optional (the URL must be `http(s)`). `info` is
+    public copy and its line breaks are preserved.
+  - `internal_notes`: optional notes for the band only. **Never returned by the
+    public `GET /api/gigs`** – only `GET /api/admin/gigs` selects the column.
+    Added in `0008_gigs_title_notes.sql`, together with `title`.
   - Nothing is seeded on purpose: an empty table means the landing page renders
     no "Kommande spelningar" section at all.
 
@@ -264,18 +270,24 @@ could never be observed in the browser.
 
 - `GET /api/gigs` (public, `functions/api/gigs.ts`) returns `{ "gigs": [...] }`
   for **today and later**, ordered by date and start time:
-  `id`, `event_date`, `start_time`, `venue`, `city`, `ticket_url`, `info`.
-  Past rows stay in the table so the admin can still fix them.
-- The filter is `event_date >= date('now')`. `date('now')` is UTC, which can keep
-  a gig visible for a couple of hours past local midnight – deliberate: showing
-  it slightly too long beats hiding it too early.
+  `id`, `event_date`, `start_time`, `title`, `venue`, `city`, `ticket_url`,
+  `info`. Past rows stay in the table so the admin can still fix them, and
+  `internal_notes` is **never** selected here – it only exists in the admin
+  response.
+- The filter binds today's date **in `Europe/Stockholm`**
+  (`todayInStockholm()`), not SQLite's UTC `date('now')`: CET/CEST runs ahead of
+  UTC, so the UTC date would already be _tomorrow_ during the last hour or two of
+  a Swedish gig evening and hide a date that is still today. A gig therefore
+  stays visible for its whole Swedish day, until 23:59:59 local time.
 - `GET /api/admin/gigs` returns **every** gig (`event_date DESC`), so the admin
-  can see and edit past dates; the UI badges them "Passerat".
+  can see and edit past dates; the UI badges them "Passerat". It also returns
+  `internal_notes`, which the public endpoint never exposes.
 - `POST` creates (`201`, `{ success, gig }`), `PUT` updates by `id` in the body
   (`404` when it does not exist) and `DELETE ?id=<n>` removes one (`404` when it
   does not exist). Invalid payloads are `400`; see `gig-rules.ts` for the rules
   (valid `YYYY-MM-DD`, optional `HH:MM`, required `venue`, optional `http(s)`
-  `ticket_url`).
+  `ticket_url`, optional `title` and `internal_notes`; line breaks inside `info`
+  and `internal_notes` are kept).
 - The landing page reads the public endpoint in
   `components/home/GigList.tsx` and renders **nothing** while the list is empty
   or the request fails, so a gig-less site has no empty calendar block.

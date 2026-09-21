@@ -4,6 +4,7 @@ import {
   formatGigDate,
   formatGigTime,
   isPastGig,
+  normalizeGigTime,
   todayIsoDate,
 } from "../data/gigs";
 import { todayInStockholm } from "../functions/api/gigs";
@@ -19,10 +20,12 @@ function payload(overrides: Record<string, unknown> = {}) {
   return {
     event_date: "2026-10-04",
     start_time: "19:00",
+    title: "Kilbyfesten",
     venue: "Boganeberget",
     city: "Kil",
     ticket_url: "https://tickets.example.com/parlband",
     info: "med Vanten",
+    internal_notes: "Boka PA i tid",
     ...overrides,
   };
 }
@@ -67,6 +70,24 @@ describe("formatGigTime", () => {
     expect(formatGigTime("25:00")).toBeNull();
     expect(formatGigTime("19:60")).toBeNull();
     expect(formatGigTime("evening")).toBeNull();
+  });
+});
+
+describe("normalizeGigTime", () => {
+  it("returns the HH:MM the API stores", () => {
+    expect(normalizeGigTime("19:00")).toBe("19:00");
+    expect(normalizeGigTime(" 9:05 ")).toBe("09:05");
+    expect(normalizeGigTime("19:00:00")).toBe("19:00");
+    expect(normalizeGigTime("00:00")).toBe("00:00");
+    expect(normalizeGigTime("23:59")).toBe("23:59");
+  });
+
+  it("returns an empty string for input the API would reject", () => {
+    expect(normalizeGigTime("")).toBe("");
+    expect(normalizeGigTime("   ")).toBe("");
+    expect(normalizeGigTime("25:00")).toBe("");
+    expect(normalizeGigTime("19:60")).toBe("");
+    expect(normalizeGigTime("7pm")).toBe("");
   });
 });
 
@@ -159,26 +180,58 @@ describe("parseGigFields", () => {
       fields: {
         eventDate: "2026-10-04",
         startTime: "19:00",
+        title: "Kilbyfesten",
         venue: "Boganeberget",
         city: "Kil",
         ticketUrl: "https://tickets.example.com/parlband",
         info: "med Vanten",
+        internalNotes: "Boka PA i tid",
       },
     });
   });
 
   it("turns empty optional fields into null", () => {
     const parsed = parseGigFields(
-      payload({ start_time: "", city: "", ticket_url: "", info: "" })
+      payload({
+        start_time: "",
+        title: "",
+        city: "",
+        ticket_url: "",
+        info: "",
+        internal_notes: "",
+      })
     );
     expect(parsed).toEqual({
       fields: {
         eventDate: "2026-10-04",
         startTime: null,
+        title: null,
         venue: "Boganeberget",
         city: null,
         ticketUrl: null,
         info: null,
+        internalNotes: null,
+      },
+    });
+  });
+
+  it("keeps line breaks inside info and internal notes", () => {
+    const parsed = parseGigFields(
+      payload({
+        info: "Line ett\nLine två",
+        internal_notes: "  Rad ett\nRad två  ",
+      })
+    );
+    expect(parsed).toEqual({
+      fields: {
+        eventDate: "2026-10-04",
+        startTime: "19:00",
+        title: "Kilbyfesten",
+        venue: "Boganeberget",
+        city: "Kil",
+        ticketUrl: "https://tickets.example.com/parlband",
+        info: "Line ett\nLine två",
+        internalNotes: "Rad ett\nRad två",
       },
     });
   });
@@ -220,6 +273,14 @@ describe("parseGigFields", () => {
     expect(parseGigFields(payload({ info: 5 }))).toEqual({
       error: "info must be a string or null",
       code: "info_type",
+    });
+    expect(parseGigFields(payload({ title: 5 }))).toEqual({
+      error: "title must be a string or null",
+      code: "title_type",
+    });
+    expect(parseGigFields(payload({ internal_notes: 5 }))).toEqual({
+      error: "internal_notes must be a string or null",
+      code: "internal_notes_type",
     });
   });
 });

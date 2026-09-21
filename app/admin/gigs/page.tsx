@@ -7,7 +7,7 @@ import GigsSection from "@/components/admin/GigsSection";
 import Toasts, { useAdminToasts } from "@/components/admin/Toasts";
 import { secondaryButtonClass } from "@/components/admin/adminStyles";
 import { adminGet } from "@/data/admin";
-import type { GigRow } from "@/data/gigs";
+import type { AdminGigRow } from "@/data/gigs";
 
 /**
  * /admin/gigs – the gig calendar ("Kommande spelningar").
@@ -18,7 +18,7 @@ import type { GigRow } from "@/data/gigs";
  * fetched at runtime.
  */
 export default function AdminGigsPage() {
-  const [gigs, setGigs] = useState<GigRow[]>([]);
+  const [gigs, setGigs] = useState<AdminGigRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toasts, notify, dismiss } = useAdminToasts();
@@ -30,7 +30,7 @@ export default function AdminGigsPage() {
    */
   const load = useCallback(
     () =>
-      adminGet<{ gigs: GigRow[] }>("/api/admin/gigs")
+      adminGet<{ gigs: AdminGigRow[] }>("/api/admin/gigs")
         .then((data) => {
           setGigs(data.gigs);
           setError(null);

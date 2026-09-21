@@ -4,17 +4,23 @@ interface Env {
   DB: D1Database;
 }
 
-/** Columns returned for a single gig. */
-const GIG_FIELDS = `id, event_date, start_time, venue, city, ticket_url, info`;
+/**
+ * Columns returned for a single gig. `internal_notes` is included here and only
+ * here: the public GET /api/gigs never selects it, so band-only notes cannot
+ * leak to the site.
+ */
+const GIG_FIELDS = `id, event_date, start_time, title, venue, city, ticket_url, info, internal_notes`;
 
 interface GigRow {
   id: number;
   event_date: string;
   start_time: string | null;
+  title: string | null;
   venue: string;
   city: string | null;
   ticket_url: string | null;
   info: string | null;
+  internal_notes: string | null;
 }
 
 async function readJsonBody<T>(request: Request): Promise<T | null> {
@@ -80,16 +86,18 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   try {
     const result = await context.env.DB.prepare(
-      `INSERT INTO gigs (event_date, start_time, venue, city, ticket_url, info)
-       VALUES (?, ?, ?, ?, ?, ?)`
+      `INSERT INTO gigs (event_date, start_time, title, venue, city, ticket_url, info, internal_notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
     )
       .bind(
         fields.eventDate,
         fields.startTime,
+        fields.title,
         fields.venue,
         fields.city,
         fields.ticketUrl,
-        fields.info
+        fields.info,
+        fields.internalNotes
       )
       .run();
 
@@ -115,16 +123,18 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   try {
     const updateResult = await context.env.DB.prepare(
       `UPDATE gigs
-       SET event_date = ?, start_time = ?, venue = ?, city = ?, ticket_url = ?, info = ?
+       SET event_date = ?, start_time = ?, title = ?, venue = ?, city = ?, ticket_url = ?, info = ?, internal_notes = ?
        WHERE id = ?`
     )
       .bind(
         fields.eventDate,
         fields.startTime,
+        fields.title,
         fields.venue,
         fields.city,
         fields.ticketUrl,
         fields.info,
+        fields.internalNotes,
         id
       )
       .run();

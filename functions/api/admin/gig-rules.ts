@@ -59,10 +59,12 @@ export function isValidHttpUrl(value: string): boolean {
 export interface GigFields {
   eventDate: string;
   startTime: string | null;
+  title: string | null;
   venue: string;
   city: string | null;
   ticketUrl: string | null;
   info: string | null;
+  internalNotes: string | null;
 }
 
 /**
@@ -78,10 +80,12 @@ export type GigErrorCode =
   | "venue_required"
   | "time_type"
   | "time_invalid"
+  | "title_type"
   | "city_type"
   | "ticket_url_type"
   | "ticket_url_invalid"
-  | "info_type";
+  | "info_type"
+  | "internal_notes_type";
 
 export interface GigFieldError {
   error: string;
@@ -104,6 +108,11 @@ export function parseGigFields(
       error: "event_date must be a valid date (YYYY-MM-DD)",
       code: "date_invalid",
     };
+  }
+
+  const title = nullableText(body.title);
+  if (title === undefined) {
+    return { error: "title must be a string or null", code: "title_type" };
   }
 
   const venue = requiredText(body.venue);
@@ -143,7 +152,24 @@ export function parseGigFields(
     return { error: "info must be a string or null", code: "info_type" };
   }
 
+  const internalNotes = nullableText(body.internal_notes);
+  if (internalNotes === undefined) {
+    return {
+      error: "internal_notes must be a string or null",
+      code: "internal_notes_type",
+    };
+  }
+
   return {
-    fields: { eventDate, startTime, venue, city, ticketUrl, info },
+    fields: {
+      eventDate,
+      startTime,
+      title,
+      venue,
+      city,
+      ticketUrl,
+      info,
+      internalNotes,
+    },
   };
 }

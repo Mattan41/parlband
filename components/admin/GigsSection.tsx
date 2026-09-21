@@ -3,6 +3,7 @@
 import { useState } from "react";
 import AdminModal from "./AdminModal";
 import GigFields, {
+  blockEnterSubmit,
   emptyGigDraft,
   gigDraftEquals,
   toGigDraft,
@@ -15,7 +16,7 @@ import {
   formatGigTime,
   isPastGig,
   todayIsoDate,
-  type GigRow,
+  type AdminGigRow,
 } from "@/data/gigs";
 import {
   dangerButtonClass,
@@ -57,11 +58,13 @@ const GIG_ERROR_MESSAGES: Record<string, string> = {
   date_invalid: "Ogiltigt datum – använd datumväljaren.",
   venue_required: "Ange ett spelställe.",
   time_type: "Tiden måste vara en text (HH:MM).",
-  time_invalid: "Ogiltig tid – använd tidsväljaren.",
+  time_invalid: "Ogiltig tid – använd 24-timmarsformatet HH:MM (t.ex. 19:00).",
+  title_type: "Titeln måste vara en text.",
   city_type: "Ort måste vara en text.",
   ticket_url_type: "Biljettlänken måste vara en text.",
   ticket_url_invalid: "Biljettlänken måste vara en fullständig http(s)-adress.",
   info_type: "Info måste vara en text.",
+  internal_notes_type: "Anteckningarna måste vara en text.",
   gig_not_found: "Datumet finns inte längre – ladda om sidan.",
 };
 
@@ -75,7 +78,7 @@ function describeGigError(cause: unknown, fallback: string): string {
 }
 
 interface SectionProps {
-  gigs: GigRow[];
+  gigs: AdminGigRow[];
   onChanged: () => Promise<void>;
   notify: (text: string, tone: "success" | "error") => void;
 }
@@ -97,7 +100,7 @@ export default function GigsSection({ gigs, onChanged, notify }: SectionProps) {
           </h2>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
             Datum från och med idag visas på startsidan. Passerade datum ligger
-            kvar här.
+            kvar här. Interna anteckningar stannar alltid i admin.
           </p>
         </div>
         <button
@@ -147,7 +150,7 @@ export default function GigsSection({ gigs, onChanged, notify }: SectionProps) {
   );
 }
 interface RowProps {
-  gig: GigRow;
+  gig: AdminGigRow;
   expanded: boolean;
   onToggle: () => void;
   onDeleted: () => void;
@@ -232,6 +235,11 @@ function GigRowEditor({
               {time}
             </span>
           ) : null}
+          {gig.title ? (
+            <span className="truncate text-xs font-medium text-zinc-900 dark:text-zinc-100">
+              {gig.title}
+            </span>
+          ) : null}
           <span className="truncate text-xs text-zinc-600 dark:text-zinc-300">
             {gig.venue}
             {gig.city ? `, ${gig.city}` : ""}
@@ -239,6 +247,11 @@ function GigRowEditor({
           {past ? (
             <span className="rounded bg-zinc-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
               Passerat
+            </span>
+          ) : null}
+          {gig.internal_notes ? (
+            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+              Anteckning
             </span>
           ) : null}
         </span>
@@ -252,7 +265,7 @@ function GigRowEditor({
         hidden={!expanded}
         className="border-t border-zinc-200 px-4 py-4 dark:border-zinc-800"
       >
-        <form onSubmit={handleSave}>
+        <form onSubmit={handleSave} onKeyDown={blockEnterSubmit}>
           <GigFields
             draft={draft}
             onChange={(patch) => {
@@ -332,11 +345,11 @@ function NewGigModal({ open, onClose, onCreated, notify }: ModalProps) {
     <AdminModal
       open={open}
       title="Nytt datum"
-      help="Fyll i datum och spelställe. Datum från och med idag visas under Kommande spelningar på startsidan; en tom lista renderas inte alls. Tid, ort, biljettlänk och info är valfria."
+      help="Fyll i datum och spelställe. Datum från och med idag visas under Kommande spelningar på startsidan; en tom lista renderas inte alls. Titel, tid, ort, biljettlänk och info är valfria – allt utom de interna anteckningarna kan synas på sajten. Bara Spara-knappen sparar, inte Enter."
       busy={saving}
       onClose={close}
     >
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} onKeyDown={blockEnterSubmit}>
         <GigFields
           draft={draft}
           onChange={(patch) => {

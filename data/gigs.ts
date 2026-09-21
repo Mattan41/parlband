@@ -1,14 +1,25 @@
-/** A gig as returned by GET /api/gigs and GET /api/admin/gigs. */
+/** A gig as returned by GET /api/gigs and (with notes) GET /api/admin/gigs. */
 export interface GigRow {
   id: number;
   /** ISO calendar date, `YYYY-MM-DD` (stored as text; string compare = date compare). */
   event_date: string;
   /** 24-hour start time, `HH:MM`, or null when it is not set yet. */
   start_time: string | null;
+  /** The gig's own name (e.g. a festival); optional. */
+  title: string | null;
   venue: string;
   city: string | null;
   ticket_url: string | null;
+  /** Public info shown on the site; line breaks are preserved. */
   info: string | null;
+}
+
+/**
+ * A gig as returned by the admin endpoint only: adds the band's internal notes,
+ * which the public GET /api/gigs never selects.
+ */
+export interface AdminGigRow extends GigRow {
+  internal_notes: string | null;
 }
 
 /**
@@ -35,6 +46,22 @@ export function formatGigDate(isoDate: string): string {
 const TIME_PATTERN = /^(\d{1,2}):([0-5]\d)(?::[0-5]\d)?$/;
 
 /**
+ * Normalise an admin-entered time to the `HH:MM` the API accepts.
+ *
+ * `"19:00"`, `"9:05"` and `"19:00:00"` all become `"09:05"`/`"19:00"`; anything
+ * unusable (or empty) becomes `""`, so the optional field can stay blank.
+ */
+export function normalizeGigTime(value: string): string {
+  const match = TIME_PATTERN.exec(value.trim());
+  if (!match) return "";
+
+  const hour = Number(match[1]);
+  if (hour > 23) return "";
+
+  return `${String(hour).padStart(2, "0")}:${match[2]}`;
+}
+
+/**
  * `"19:00"` → `"kl. 19:00"`, or null when no usable time is set.
  *
  * Strictly 24-hour Swedish: there is no AM/PM branch anywhere, the hour is
@@ -43,14 +70,8 @@ const TIME_PATTERN = /^(\d{1,2}):([0-5]\d)(?::[0-5]\d)?$/;
 export function formatGigTime(startTime: string | null): string | null {
   if (startTime === null) return null;
 
-  const match = TIME_PATTERN.exec(startTime.trim());
-  if (!match) return null;
-
-  const [, hours, minutes] = match;
-  const hour = Number(hours);
-  if (hour > 23) return null;
-
-  return `kl. ${String(hour).padStart(2, "0")}:${minutes}`;
+  const time = normalizeGigTime(startTime);
+  return time === "" ? null : `kl. ${time}`;
 }
 
 /**

@@ -13,6 +13,10 @@ import { formatGigDate, formatGigTime, type GigRow } from "@/data/gigs";
  * The muted moss-green accent (left bar, heading, date chips) is what tells this
  * section apart from the zinc/amber song cards below it; the colors are
  * contrast-checked for both themes (text >= 4.5:1, the accent bar >= 3:1).
+ *
+ * A gig's `title` is shown when the band has filled one in, and `info` keeps its
+ * line breaks. `internal_notes` never arrives here: the public endpoint does not
+ * select that column (see functions/api/gigs.ts).
  */
 export default function GigList() {
   const [gigs, setGigs] = useState<GigRow[]>([]);
@@ -74,12 +78,17 @@ export default function GigList() {
                   {time}
                 </span>
               ) : null}
+              {gig.title ? (
+                <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                  {gig.title}
+                </span>
+              ) : null}
               <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
                 {gig.venue}
                 {gig.city ? `, ${gig.city}` : ""}
               </span>
               {gig.info ? (
-                <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                <span className="whitespace-pre-line text-xs text-zinc-500 dark:text-zinc-400">
                   {gig.info}
                 </span>
               ) : null}

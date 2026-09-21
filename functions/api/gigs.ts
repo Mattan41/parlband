@@ -7,6 +7,7 @@ interface GigRow {
   id: number;
   event_date: string;
   start_time: string | null;
+  title: string | null;
   venue: string;
   city: string | null;
   ticket_url: string | null;
@@ -44,11 +45,14 @@ export function todayInStockholm(now: Date = new Date()): string {
  * for the whole day of the event until 23:59:59 regardless of the UTC offset.
  * Past rows stay in the table for the admin and disappear from the site on their
  * own once the Swedish day has rolled over.
+ *
+ * `internal_notes` is deliberately never selected: those notes are for the band
+ * and only the admin endpoint (functions/api/admin/gigs.ts) returns them.
  */
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   try {
     const result = await context.env.DB.prepare(
-      `SELECT id, event_date, start_time, venue, city, ticket_url, info
+      `SELECT id, event_date, start_time, title, venue, city, ticket_url, info
        FROM gigs
        WHERE event_date >= ?
        ORDER BY event_date, start_time`

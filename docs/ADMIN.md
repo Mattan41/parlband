@@ -160,13 +160,29 @@ separate save is needed for the file.
 
 - **Katalog | Spelningar | Om oss** in the admin nav; **Spelningar** opens
   `/admin/gigs`, the gig calendar.
-- **+ Nytt datum** creates a date in a modal (date and venue required; time,
-  city, ticket link and info are optional). A failed save keeps the modal open
-  with your input and shows the error there; closing with unsaved input asks
-  "Du har osparade ändringar. Stäng ändå?" first.
+- **+ Nytt datum** creates a date in a modal (date and venue required; title,
+  time, city, ticket link, info and internal notes are optional). A failed save
+  keeps the modal open with your input and shows the error there; closing with
+  unsaved input asks "Du har osparade ändringar. Stäng ändå?" first.
+- **Enter never saves.** Only the **Spara**/**Skapa datum** button submits; a
+  stray keypress in a field (e.g. the venue) can no longer commit a half-written
+  date. Inside the multi-line fields Enter inserts a line break, as expected.
+- **Titel** is the gig's own name (e.g. a festival) and makes a date easy to
+  recognise in the list. It is optional and **is shown on the public site** when
+  filled in.
+- **Tid** is typed as text in strict 24-hour form (`19:00`, never AM/PM – the
+  native time picker was dropped because it follows the browser's locale and
+  shows AM/PM on an en-US machine). `9:05` is tidied to `09:05` when the field
+  loses focus; a value the API cannot parse is refused with Swedish copy.
+- **Info** is a multi-line field: the line breaks are kept and rendered as rows
+  on the landing page.
+- **Interna anteckningar** are for the band only. They are stored and shown in
+  the admin (a row with a note carries a small **Anteckning** badge) but the
+  public `GET /api/gigs` never selects the column, so they cannot appear on the
+  site.
 - Existing dates are an accordion: one row is open at a time, and the collapsed
-  row shows the Swedish date (e.g. `sön 4 okt. 2026`), the time, the venue and
-  whether it has passed.
+  row shows the Swedish date (e.g. `sön 4 okt. 2026`), the time, the title, the
+  venue and whether it has passed.
 - Dates from **today and later** are what the landing page shows; a gig that has
   passed stays in the list with a **Passerat** badge but is no longer public.
 - A venue is required and a ticket link must be an `http(s)` URL, otherwise the
