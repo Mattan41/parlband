@@ -78,12 +78,18 @@ export default function GigFields({ draft, onChange }: Props) {
 
       <label>
         <span className={labelClass}>Tid (valfritt)</span>
+        {/* `type="time"` ignores `placeholder` in most browsers and always
+            renders 24-hour input here (no AM/PM), so the format is hinted in
+            the copy instead. */}
         <input
           type="time"
           className={inputClass}
           value={draft.start_time}
           onChange={(event) => onChange({ start_time: event.target.value })}
         />
+        <span className="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">
+          24-timmarsformat, t.ex. 19:00
+        </span>
       </label>
 
       <label>

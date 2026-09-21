@@ -11,7 +11,7 @@ Recordings are a nested accordion under the song, and a collapsed recording row
 shows its year/album, status badges and both counters.
 
 The admin area has its own top navigation – **Katalog** (`/admin`),
-**Spelningar** (`/admin/spelningar`) and **Om oss** (`/admin/about`) – rendered on
+**Spelningar** (`/admin/gigs`) and **Om oss** (`/admin/about`) – rendered on
 every admin page (`components/admin/AdminNav.tsx`). It is separate from the
 public `components/SiteNav.tsx`, which links the public pages. The public
 heading of the gig section is **Kommande spelningar**; the nav pill keeps the
@@ -159,7 +159,7 @@ separate save is needed for the file.
 ## Spelningar ("Kommande spelningar")
 
 - **Katalog | Spelningar | Om oss** in the admin nav; **Spelningar** opens
-  `/admin/spelningar`, the gig calendar.
+  `/admin/gigs`, the gig calendar.
 - **+ Nytt datum** creates a date in a modal (date and venue required; time,
   city, ticket link and info are optional). A failed save keeps the modal open
   with your input and shows the error there; closing with unsaved input asks

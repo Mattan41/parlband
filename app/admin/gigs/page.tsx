@@ -10,7 +10,7 @@ import { adminGet } from "@/data/admin";
 import type { GigRow } from "@/data/gigs";
 
 /**
- * /admin/spelningar – the gig calendar ("Kommande spelningar").
+ * /admin/gigs – the gig calendar ("Kommande spelningar").
  *
  * The route is protected by Cloudflare Access at the edge like the rest of
  * /admin*, and the write endpoints by functions/api/admin/_middleware.ts. The

@@ -65,7 +65,7 @@ export default function Home() {
     <PublicShell width="wide">
       <Hero welcomeText={welcomeText} />
 
-      {/* Renders nothing until the band adds a date in /admin/spelningar. */}
+      {/* Renders nothing until the band adds a date in /admin/gigs. */}
       <GigList />
 
       {/* The hero's "Lyssna" hint jumps here, past "Kommande spelningar".

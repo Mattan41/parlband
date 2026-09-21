@@ -74,7 +74,7 @@ app/                 App Router routes
   texter/page.tsx    /texter – lyrics & chords; deep-links via ?song=<id>
   about/page.tsx     /about – "Om oss"; heading + body from GET /api/content
   admin/page.tsx     /admin – catalogue editor (Cloudflare Access)
-  admin/spelningar/page.tsx  /admin/spelningar – gig calendar editor
+  admin/gigs/page.tsx      /admin/gigs – gig calendar editor
   admin/about/page.tsx     /admin/about – editor for the welcome text + "Om oss"
   icon.png           app/favicon icon, served at /icon.png (rendered from public/pwa-icon.svg)
   robots.ts          /robots.txt (static export)
@@ -96,14 +96,14 @@ docs/                DATABASE.md, UPLOADING.md, ADMIN.md, PWA.md
 
 ## Routes
 
-| Route               | Description                                                             |
-| ------------------- | ----------------------------------------------------------------------- |
-| `/`                 | Hero + Kommande spelningar (no section until a date exists) + tracklist |
-| `/texter`           | Lyrics & chords for songs that have lyrics; `?song=<id>` deep links     |
-| `/about`            | "Om oss": editable heading + text, streaming links and contact          |
-| `/admin`            | Admin/editor UI, protected by Cloudflare Access                         |
-| `/admin/spelningar` | Gig calendar editor, protected by Cloudflare Access                     |
-| `/admin/about`      | Editor for the welcome text and the Om oss page, Cloudflare Access      |
+| Route          | Description                                                             |
+| -------------- | ----------------------------------------------------------------------- |
+| `/`            | Hero + Kommande spelningar (no section until a date exists) + tracklist |
+| `/texter`      | Lyrics & chords for songs that have lyrics; `?song=<id>` deep links     |
+| `/about`       | "Om oss": editable heading + text, streaming links and contact          |
+| `/admin`       | Admin/editor UI, protected by Cloudflare Access                         |
+| `/admin/gigs`  | Gig calendar editor, protected by Cloudflare Access                     |
+| `/admin/about` | Editor for the welcome text and the Om oss page, Cloudflare Access      |
 
 ## PWA / installability
 

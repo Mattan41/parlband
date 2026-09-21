@@ -184,7 +184,7 @@ export default function MusicianOverview({
                 className={inputClass}
                 value={newName}
                 onChange={(event) => setNewName(event.target.value)}
-                placeholder="t.ex. Erik Walfridsson"
+                placeholder="t.ex. Ale Möller"
               />
             </label>
             <button

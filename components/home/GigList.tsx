@@ -8,11 +8,11 @@ import { formatGigDate, formatGigTime, type GigRow } from "@/data/gigs";
  *
  * Renders nothing at all when there are no upcoming dates (or when the request
  * fails): the section is secondary content, so an empty state or an error box
- * would only be noise. Dates are entered at /admin/spelningar.
+ * would only be noise. Dates are entered at /admin/gigs.
  *
- * The emerald accent (left bar, heading, date chips) is what tells this section
- * apart from the zinc/amber song cards below it; the colors are contrast-checked
- * for both themes (text >= 4.5:1, the accent bar >= 3:1).
+ * The muted moss-green accent (left bar, heading, date chips) is what tells this
+ * section apart from the zinc/amber song cards below it; the colors are
+ * contrast-checked for both themes (text >= 4.5:1, the accent bar >= 3:1).
  */
 export default function GigList() {
   const [gigs, setGigs] = useState<GigRow[]>([]);

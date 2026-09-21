@@ -6,6 +6,7 @@ import {
   isPastGig,
   todayIsoDate,
 } from "../data/gigs";
+import { todayInStockholm } from "../functions/api/gigs";
 import {
   isValidDate,
   isValidHttpUrl,
@@ -34,20 +35,76 @@ describe("formatGigDate", () => {
   });
 
   it("passes an unparseable value through unchanged", () => {
-    expect(formatGigDate("inte-ett-datum")).toBe("inte-ett-datum");
+    expect(formatGigDate("not-a-date")).toBe("not-a-date");
   });
 });
 
 describe("formatGigTime", () => {
-  it("prefixes a set time and hides an empty one", () => {
+  it("prefixes a set time in Swedish 24-hour form", () => {
     expect(formatGigTime("19:00")).toBe("kl. 19:00");
+    expect(formatGigTime("00:00")).toBe("kl. 00:00");
+    expect(formatGigTime("23:59")).toBe("kl. 23:59");
+  });
+
+  it("hides an empty time", () => {
     expect(formatGigTime(null)).toBeNull();
+    expect(formatGigTime("")).toBeNull();
+    expect(formatGigTime("   ")).toBeNull();
+  });
+
+  it("never renders AM/PM", () => {
+    for (const value of ["07:00", "12:00", "19:00", "23:59"]) {
+      expect(formatGigTime(value)).not.toMatch(/[APap]\.?[Mm]\.?/);
+    }
+  });
+
+  it("normalises seconds and single-digit hours", () => {
+    expect(formatGigTime("19:00:00")).toBe("kl. 19:00");
+    expect(formatGigTime(" 9:05 ")).toBe("kl. 09:05");
+  });
+
+  it("hides malformed values instead of echoing them", () => {
+    expect(formatGigTime("25:00")).toBeNull();
+    expect(formatGigTime("19:60")).toBeNull();
+    expect(formatGigTime("evening")).toBeNull();
   });
 });
 
 describe("todayIsoDate / isPastGig", () => {
-  it("zero-pads the local date", () => {
-    expect(todayIsoDate(new Date(2026, 0, 4, 23, 30))).toBe("2026-01-04");
+  /**
+   * Fixed UTC instants, so the assertions hold in whatever timezone the test
+   * runner happens to be in. CET is UTC+1 and CEST is UTC+2.
+   */
+  const stockholmCases: Array<[instant: string, expected: string]> = [
+    ["2026-01-04T22:30:00Z", "2026-01-04"], // 23:30 CET
+    ["2026-01-04T23:30:00Z", "2026-01-05"], // 00:30 CET, past UTC midnight
+    ["2026-07-04T21:30:00Z", "2026-07-04"], // 23:30 CEST
+    ["2026-07-04T22:30:00Z", "2026-07-05"], // 00:30 CEST
+    ["2026-01-04T12:00:00Z", "2026-01-04"],
+  ];
+
+  it("follows Europe/Stockholm, not UTC or the runner's timezone", () => {
+    for (const [instant, expected] of stockholmCases) {
+      expect(todayIsoDate(new Date(instant))).toBe(expected);
+    }
+  });
+
+  it("agrees with the public API's Stockholm helper", () => {
+    for (const [instant] of stockholmCases) {
+      expect(todayInStockholm(new Date(instant))).toBe(
+        todayIsoDate(new Date(instant))
+      );
+    }
+  });
+
+  it("keeps a gig visible for the whole Swedish day of the event", () => {
+    // 00:30 on the 5th in Sweden while UTC is still the 4th: the gig dated the
+    // 5th is still upcoming (it must stay visible all day), the one from the 4th
+    // has passed.
+    const today = todayIsoDate(new Date("2026-01-04T23:30:00Z"));
+    expect(today).toBe("2026-01-05");
+    expect(isPastGig("2026-01-05", today)).toBe(false);
+    expect(isPastGig("2026-01-04", today)).toBe(true);
   });
 
   it("treats today as upcoming and yesterday as past", () => {

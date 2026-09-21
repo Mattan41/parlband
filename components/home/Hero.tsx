@@ -15,19 +15,18 @@ interface Props {
  * The welcome line comes from GET /api/content and is edited at /admin/about;
  * an empty value hides it entirely (no fallback text in code).
  *
- * On mobile the hero fills the first viewport minus the chrome above it, and the
- * welcome line + scroll hint are pushed to the bottom with `mt-auto` so they sit
- * just above the fold instead of being hidden below the image. The chrome is
- * `--site-nav-height` (components/SiteNav.tsx, see globals.css) plus 3.5rem for
- * the shell's `pt-8` (2rem) and `gap-6` (1.5rem) – keep those values in sync
- * with components/PublicShell.tsx. Both image caps (`max-h-[24svh]` and
- * `sm:max-h-[45svh]`) exist to protect that budget: the hero spans the full wide
- * container, so an uncapped `aspect-video` image would be taller than a laptop
- * viewport on its own. `svh` (small viewport height) is used instead of `dvh` to
- * avoid the layout shifting as the mobile URL bar shows/hides.
+ * The hero keeps its natural height on every breakpoint: there is deliberately
+ * no `min-h` based on `100svh` and no `mt-auto`, because the forced full-screen
+ * height used to stretch the hero and leave a large void on mobile between the
+ * band members and the welcome line. The welcome line now follows the credits
+ * with a modest gap (`mt-4 sm:mt-6`), so the top of "Kommande spelningar" /
+ * the tracklist naturally peeks above the fold.
  *
- * From `sm` up the natural height is kept (`sm:min-h-0`), so the hint ends the
- * hero instead of being pinned to a stretched one.
+ * Both image caps (`max-h-[24svh]` and `sm:max-h-[45svh]`) are kept so the wide
+ * `aspect-video` frame cannot dominate the screen on its own – the hero spans
+ * the full wide container, so an uncapped image would fill a laptop viewport.
+ * `svh` (small viewport height) is used instead of `dvh` to avoid the layout
+ * shifting as the mobile URL bar shows/hides.
  *
  * The "Ni hittar oss även här" card lives on /about; drop
  * `components/StreamingLinks.tsx` in here (or in app/page.tsx) to show it on the
@@ -35,7 +34,7 @@ interface Props {
  */
 export default function Hero({ welcomeText }: Props) {
   return (
-    <header className="flex min-h-[calc(100svh-var(--site-nav-height)-3.5rem)] flex-col text-center sm:min-h-0">
+    <header className="flex flex-col text-center">
       <h1 className="text-5xl font-bold tracking-tight text-zinc-900 sm:text-7xl dark:text-zinc-50">
         Pärlband
       </h1>
@@ -66,14 +65,14 @@ export default function Hero({ welcomeText }: Props) {
         </span>
       </h2>
 
-      {/* Welcome line + scroll hint share the bottom of the first mobile
-          viewport via mt-auto. The label carries the id the tracklist section
-          is labelled by (aria-labelledby in app/page.tsx) and the whole block
-          jumps to it, past the "Kommande spelningar" section.
+      {/* Welcome line + scroll hint follow the credits with a modest gap. The
+          label carries the id the tracklist section is labelled by
+          (aria-labelledby in app/page.tsx) and the whole block jumps to it, past
+          the "Kommande spelningar" section.
 
           The welcome line is edited at /admin/about (key `welcome_text`); an
           empty value renders nothing at all, there is no fallback text here. */}
-      <div className="mt-auto pt-6 sm:pt-8">
+      <div className="mt-4 sm:mt-6">
         {welcomeText.trim() !== "" ? (
           <p className="mx-auto max-w-xl text-sm leading-relaxed text-zinc-600 sm:text-base dark:text-zinc-300">
             {welcomeText}

@@ -27,7 +27,7 @@ D1 (parlband-db)
        └─ components/home/GigList.tsx  "Kommande spelningar"; renders nothing when empty
   └─ functions/api/admin/*    /api/admin/*   (CRUD + R2 uploads: mp3/wav/cover/pdf)
        ├─ app/admin/page.tsx         catalogue UI (protected by Cloudflare Access)
-       ├─ app/admin/spelningar/page.tsx  gig calendar (/api/admin/gigs)
+       ├─ app/admin/gigs/page.tsx   gig calendar (/api/admin/gigs)
        └─ app/admin/about/page.tsx   page-copy editor (PUT /api/admin/content)
 ```
 
@@ -90,12 +90,12 @@ settings.
   three are edited at `/admin/about`; the key/value shape keeps the schema stable
   when more editable copy is added.
 
-- **gigs** – The gig calendar ("Kommande spelningar"), edited at
-  `/admin/spelningar`.
+- **gigs** – The gig calendar ("Kommande spelningar"), edited at `/admin/gigs`.
   - `event_date`: ISO date (`YYYY-MM-DD`, text). `GET /api/gigs` only returns
-    today and later, so past gigs disappear from the site on their own while
-    staying in the admin; the admin also relies on the ISO form for the
-    "Passerat" badge.
+    today and later **in `Europe/Stockholm`** (the route binds the Swedish date
+    instead of SQLite's UTC `date('now')`, so a gig stays visible until 23:59:59
+    local time), so past gigs disappear from the site on their own while staying
+    in the admin; the admin also relies on the ISO form for the "Passerat" badge.
   - `start_time`: optional 24-hour time (`HH:MM`).
   - `venue`: required, e.g. a stage or a festival name.
   - `city`, `ticket_url`, `info`: optional (the URL must be `http(s)`).
