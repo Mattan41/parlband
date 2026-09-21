@@ -1,12 +1,20 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { AdminMusician, AdminSong } from "@/data/admin";
+import { adminJson, type AdminMusician, type AdminSong } from "@/data/admin";
 import { buildMusicianOverview } from "./musicianOverview";
+import { inputClass, primaryButtonClass } from "./adminStyles";
+
+interface Feedback {
+  text: string;
+  tone: "success" | "error";
+}
 
 interface Props {
   songs: AdminSong[];
   musicians: AdminMusician[];
+  /** Refresh just the musician list after adding one (no remount). */
+  onMusiciansChanged: () => Promise<void>;
 }
 
 function recordingLabel(year: number | null, album: string | null): string {
@@ -19,14 +27,56 @@ function recordingLabel(year: number | null, album: string | null): string {
  * Derived entirely from the songs/musicians already loaded by the page – no
  * extra API call.
  */
-export default function MusicianOverview({ songs, musicians }: Props) {
+export default function MusicianOverview({
+  songs,
+  musicians,
+  onMusiciansChanged,
+}: Props) {
   const [open, setOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
   const overview = useMemo(
     () => buildMusicianOverview(songs, musicians),
     [songs, musicians]
   );
 
   const withoutCredits = overview.recordingsWithoutCredits.length;
+
+  async function handleAddMusician(event: React.FormEvent) {
+    event.preventDefault();
+    const name = newName.trim();
+    if (!name) {
+      setFeedback({ text: "Ange ett namn.", tone: "error" });
+      return;
+    }
+
+    setAdding(true);
+    setFeedback(null);
+    try {
+      const created = await adminJson<{ musician: AdminMusician }>(
+        "/api/admin/musicians",
+        "POST",
+        { name }
+      );
+      setNewName("");
+      setFeedback({
+        text: `${created.musician.name} tillagd.`,
+        tone: "success",
+      });
+      await onMusiciansChanged();
+    } catch (cause) {
+      setFeedback({
+        text:
+          cause instanceof Error
+            ? cause.message
+            : "Kunde inte lägga till musikern",
+        tone: "error",
+      });
+    } finally {
+      setAdding(false);
+    }
+  }
 
   return (
     <section className="mt-8 overflow-hidden rounded-lg border border-l-4 border-zinc-200 border-l-sky-500 bg-white shadow-sm dark:border-zinc-800 dark:border-l-sky-500 dark:bg-zinc-900/60">
@@ -65,6 +115,43 @@ export default function MusicianOverview({ songs, musicians }: Props) {
             Läsvy – uppgifterna kommer från inspelningarnas medverkande och
             ändras på inspelningskorten.
           </p>
+
+          <form
+            onSubmit={handleAddMusician}
+            className="mb-4 flex flex-wrap items-end gap-2"
+          >
+            <label className="min-w-40 flex-1">
+              <span className="block text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                Ny musiker
+              </span>
+              <input
+                className={inputClass}
+                value={newName}
+                onChange={(event) => setNewName(event.target.value)}
+                placeholder="t.ex. Erik Walfridsson"
+              />
+            </label>
+            <button
+              type="submit"
+              className={primaryButtonClass}
+              disabled={adding}
+            >
+              {adding ? "Sparar…" : "Lägg till"}
+            </button>
+          </form>
+
+          {feedback ? (
+            <p
+              role={feedback.tone === "error" ? "alert" : "status"}
+              className={`mb-3 rounded-md border px-2 py-1 text-xs ${
+                feedback.tone === "error"
+                  ? "border-red-300 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
+                  : "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300"
+              }`}
+            >
+              {feedback.text}
+            </p>
+          ) : null}
 
           <div className="space-y-4">
             {overview.entries.map((entry) => (

@@ -154,7 +154,7 @@ export default function CreditsEditor({
   }
 
   return (
-    <div className="mt-3">
+    <div className="mt-4 rounded-md border border-zinc-200 bg-white/70 p-3 dark:border-zinc-800 dark:bg-zinc-900/40">
       <h4 className={labelClass}>Medverkande</h4>
 
       {recordingId === null ? (
@@ -164,6 +164,10 @@ export default function CreditsEditor({
         </p>
       ) : (
         <>
+          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+            Sparas direkt – du behöver inte trycka Spara.
+          </p>
+
           {feedback ? (
             <p
               role={feedback.tone === "error" ? "alert" : "status"}

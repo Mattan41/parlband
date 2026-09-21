@@ -73,7 +73,8 @@ A song can have several recordings (e.g. studio + live).
   with unsaved input asks "Du har osparade ändringar. Stäng ändå?" first.
 - The **newly created recording is expanded automatically**.
 - Recordings are an **accordion**: only one is open per song, and a collapsed
-  row shows year, album and the Huvudinspelning/Dold badges so the takes stay
+  row shows year, album, the Huvudinspelning/Dold badges, the play count and a
+  compact credits summary (e.g. `Mats: Elbas · Nova: Sång`) so the takes stay
   easy to tell apart.
 - Fields: album, studio, year, engineer, notes, mp3 path, wav path, cover path.
 - **Publik** (`is_public`): whether the recording may be shown on the site.
@@ -141,6 +142,9 @@ separate save is needed for the file.
   played on it.
 - Musicians must exist in the `musicians` table; pick one from the credits editor.
 - Credits describe the recording, not the song.
+- The credits editor is its **own bordered block** with the note
+  "Sparas direkt – du behöver inte trycka Spara": **Lägg till**/**Ta bort** save
+  immediately, while **Spara** only applies to the recording fields above it.
 - Feedback appears **inline in the recording card** ("Medverkande tillagd"), not
   in a toast.
 - Adding a combo that already exists returns `409` and shows "Medverkande finns
@@ -156,6 +160,18 @@ separate save is needed for the file.
   already loaded by the page (no extra API call): each musician is listed with
   their credits grouped by song/recording, and recordings that still have **no**
   credits are listed separately.
+- **+ Ny musiker** in that section adds a name through `POST /api/admin/musicians`
+  with inline feedback and refreshes the list without a page reload. The endpoint
+  is idempotent (case-insensitive), so an already-registered name is reused
+  rather than duplicated.
+
+## Implementation note
+
+Never nest one `<form>` inside another in the admin UI. A nested form is invalid,
+so the browser does not route its submit through React and falls back to a native
+GET submit – the page navigates to `/admin?` and reloads, losing all state. Each
+editor owns its own form: the recording fields/actions are one form, and the
+credits editor (and every other sub-editor) sits next to it, not inside it.
 
 ## Related documentation
 

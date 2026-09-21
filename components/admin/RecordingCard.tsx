@@ -5,6 +5,7 @@ import {
   adminJson,
   fileUrl,
   uploadAdminFile,
+  type AdminCredit,
   type AdminMusician,
   type AdminRecording,
   type AdminSong,
@@ -93,6 +94,19 @@ function draftEquals(a: RecordingDraft, b: RecordingDraft): boolean {
 interface Feedback {
   text: string;
   tone: "success" | "error";
+}
+
+/** "Mats: Elbas · Nova: Sång" – compact credits line for the collapsed header. */
+function formatCredits(credits: AdminCredit[]): string {
+  const instrumentsByMusician = new Map<string, string[]>();
+  for (const credit of credits) {
+    const instruments = instrumentsByMusician.get(credit.musician) ?? [];
+    instruments.push(credit.instrument);
+    instrumentsByMusician.set(credit.musician, instruments);
+  }
+  return [...instrumentsByMusician.entries()]
+    .map(([name, instruments]) => `${name}: ${instruments.join(", ")}`)
+    .join(" · ");
 }
 
 interface Props {
@@ -322,252 +336,274 @@ export default function RecordingCard({
     : [recording.year, recording.album].filter(Boolean).join(" · ") ||
       "Inget år/album angivet";
 
+  const creditSummary = recording ? formatCredits(recording.credits) : "";
+
   const headerInner = (
-    <span className="flex min-w-0 flex-wrap items-center gap-2">
-      <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-800 dark:bg-sky-900/50 dark:text-sky-300">
-        {isNew ? "Ny inspelning" : "Inspelning"}
+    <span className="flex min-w-0 flex-1 flex-col gap-0.5 text-left">
+      <span className="flex min-w-0 flex-wrap items-center gap-2">
+        <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-800 dark:bg-sky-900/50 dark:text-sky-300">
+          {isNew ? "Ny inspelning" : "Inspelning"}
+        </span>
+        {primaryBadge}
+        {hiddenBadge}
+        <span className="truncate text-xs text-zinc-600 dark:text-zinc-300">
+          {summary}
+        </span>
       </span>
-      {primaryBadge}
-      {hiddenBadge}
-      <span className="truncate text-xs text-zinc-600 dark:text-zinc-300">
-        {summary}
-      </span>
+      {creditSummary ? (
+        <span className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+          {creditSummary}
+        </span>
+      ) : null}
     </span>
   );
 
-  return (
-    <form
-      onSubmit={handleSave}
-      className="rounded-md border border-l-4 border-zinc-200 border-l-sky-500 bg-sky-50/40 p-3 transition focus-within:ring-1 focus-within:ring-sky-400 dark:border-zinc-800 dark:border-l-sky-500 dark:bg-sky-950/20 dark:focus-within:ring-sky-600"
-    >
-      <div className="mb-2 flex items-center justify-between gap-2">
-        {onToggle ? (
-          <button
-            type="button"
-            onClick={onToggle}
-            aria-expanded={expanded}
-            className="min-w-0 flex-1 text-left"
-          >
-            {headerInner}
-          </button>
-        ) : (
-          <div className="min-w-0 flex-1">{headerInner}</div>
-        )}
-        <span className="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">
-          {recording?.play_count ?? 0} spelningar
+  const headerRow = (
+    <>
+      {headerInner}
+      <span className="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">
+        {recording?.play_count ?? 0} spelningar
+      </span>
+      {onToggle ? (
+        <span className="shrink-0 text-xs text-zinc-400">
+          {expanded ? "▲" : "▼"}
         </span>
-        {onToggle ? (
-          <span className="shrink-0 text-xs text-zinc-400">
-            {expanded ? "▲" : "▼"}
-          </span>
-        ) : null}
-      </div>
+      ) : null}
+    </>
+  );
+
+  return (
+    <div className="overflow-hidden rounded-md border border-l-4 border-zinc-200 border-l-sky-500 bg-sky-50/40 transition focus-within:ring-1 focus-within:ring-sky-400 dark:border-zinc-800 dark:border-l-sky-500 dark:bg-sky-950/20 dark:focus-within:ring-sky-600">
+      {onToggle ? (
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={expanded}
+          className={`flex w-full items-center justify-between gap-2 p-3 text-left transition-colors hover:bg-sky-100/50 dark:hover:bg-sky-900/40 ${
+            expanded
+              ? "border-b border-zinc-200 bg-sky-100/30 dark:border-zinc-800 dark:bg-sky-900/30"
+              : ""
+          }`}
+        >
+          {headerRow}
+        </button>
+      ) : (
+        <div className="flex w-full items-center justify-between gap-2 p-3">
+          {headerRow}
+        </div>
+      )}
 
       {/* Mounted even when collapsed so unsaved drafts survive. */}
-      <div hidden={!expanded}>
-        {feedback ? (
-          <p
-            role={feedback.tone === "error" ? "alert" : "status"}
-            className={`mb-3 rounded-md border px-3 py-2 text-xs ${
-              feedback.tone === "error"
-                ? "border-red-300 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
-                : "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300"
-            }`}
-          >
-            {feedback.text}
-          </p>
-        ) : null}
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label>
-            <span className={labelClass}>Album</span>
-            <input
-              className={inputClass}
-              value={draft.album}
-              onChange={(event) => updateDraft({ album: event.target.value })}
-            />
-          </label>
-          <label>
-            <span className={labelClass}>Studio</span>
-            <input
-              className={inputClass}
-              value={draft.studio}
-              onChange={(event) => updateDraft({ studio: event.target.value })}
-            />
-          </label>
-          <label>
-            <span className={labelClass}>År</span>
-            <input
-              className={inputClass}
-              inputMode="numeric"
-              value={draft.year}
-              onChange={(event) => updateDraft({ year: event.target.value })}
-            />
-          </label>
-          <label>
-            <span className={labelClass}>Tekniker</span>
-            <input
-              className={inputClass}
-              value={draft.engineer}
-              onChange={(event) =>
-                updateDraft({ engineer: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            <span className={labelClass}>MP3-sökväg</span>
-            <input
-              className={inputClass}
-              value={draft.mp3_path}
-              onChange={(event) =>
-                updateDraft({ mp3_path: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            <span className={labelClass}>WAV-sökväg</span>
-            <input
-              className={inputClass}
-              value={draft.wav_path}
-              onChange={(event) =>
-                updateDraft({ wav_path: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            <span className={labelClass}>Omslagsbild</span>
-            <input
-              className={inputClass}
-              value={draft.cover_path}
-              onChange={(event) =>
-                updateDraft({ cover_path: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            <span className={labelClass}>Anteckningar</span>
-            <input
-              className={inputClass}
-              value={draft.notes}
-              onChange={(event) => updateDraft({ notes: event.target.value })}
-            />
-          </label>
-        </div>
-
-        <fieldset className="mt-4 rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
-          <legend className={labelClass}>Synlighet</legend>
-
-          <label className="flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300">
-            <input
-              type="checkbox"
-              className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-amber-600 focus:ring-amber-500"
-              checked={draft.is_public}
-              onChange={(event) =>
-                updateDraft({ is_public: event.target.checked })
-              }
-            />
-            <span>
-              Publik (visas på hemsidan)
-              <span className="block text-xs text-zinc-500 dark:text-zinc-400">
-                Avmarkera för att dölja inspelningen på hemsidan. Inspelningen
-                kan fortfarande spelas upp via direktlänk.
-              </span>
-            </span>
-          </label>
-
-          <label className="mt-3 flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300">
-            <input
-              type="checkbox"
-              className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-amber-600 focus:ring-amber-500"
-              checked={draft.is_primary}
-              onChange={(event) =>
-                updateDraft({ is_primary: event.target.checked })
-              }
-            />
-            <span>
-              Huvudinspelning
-              <span className="block text-xs text-zinc-500 dark:text-zinc-400">
-                Avgör vilken av de publika inspelningarna som spelas när flera
-                finns. Döljer ingenting i sig.
-              </span>
-            </span>
-          </label>
-        </fieldset>
-
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          {UPLOAD_KINDS.map((kind) => (
-            <label
-              key={kind}
-              className={`${secondaryButtonClass} cursor-pointer`}
+      <div hidden={!expanded} className="p-3">
+        {/* Only the recording fields/actions: the credits editor below is its
+            own form and must NOT be nested (nested forms break submission). */}
+        <form onSubmit={handleSave}>
+          {feedback ? (
+            <p
+              role={feedback.tone === "error" ? "alert" : "status"}
+              className={`mb-3 rounded-md border px-3 py-2 text-xs ${
+                feedback.tone === "error"
+                  ? "border-red-300 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
+                  : "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300"
+              }`}
             >
-              {uploading === kind
-                ? "Laddar upp…"
-                : `Ladda upp ${UPLOAD_LABEL[kind]}`}
+              {feedback.text}
+            </p>
+          ) : null}
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label>
+              <span className={labelClass}>Album</span>
               <input
-                type="file"
-                className="hidden"
-                accept={UPLOAD_ACCEPT[kind]}
-                disabled={uploading !== null}
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  event.target.value = "";
-                  if (file) void handleUpload(kind, file);
-                }}
+                className={inputClass}
+                value={draft.album}
+                onChange={(event) => updateDraft({ album: event.target.value })}
               />
             </label>
-          ))}
+            <label>
+              <span className={labelClass}>Studio</span>
+              <input
+                className={inputClass}
+                value={draft.studio}
+                onChange={(event) =>
+                  updateDraft({ studio: event.target.value })
+                }
+              />
+            </label>
+            <label>
+              <span className={labelClass}>År</span>
+              <input
+                className={inputClass}
+                inputMode="numeric"
+                value={draft.year}
+                onChange={(event) => updateDraft({ year: event.target.value })}
+              />
+            </label>
+            <label>
+              <span className={labelClass}>Tekniker</span>
+              <input
+                className={inputClass}
+                value={draft.engineer}
+                onChange={(event) =>
+                  updateDraft({ engineer: event.target.value })
+                }
+              />
+            </label>
+            <label>
+              <span className={labelClass}>MP3-sökväg</span>
+              <input
+                className={inputClass}
+                value={draft.mp3_path}
+                onChange={(event) =>
+                  updateDraft({ mp3_path: event.target.value })
+                }
+              />
+            </label>
+            <label>
+              <span className={labelClass}>WAV-sökväg</span>
+              <input
+                className={inputClass}
+                value={draft.wav_path}
+                onChange={(event) =>
+                  updateDraft({ wav_path: event.target.value })
+                }
+              />
+            </label>
+            <label>
+              <span className={labelClass}>Omslagsbild</span>
+              <input
+                className={inputClass}
+                value={draft.cover_path}
+                onChange={(event) =>
+                  updateDraft({ cover_path: event.target.value })
+                }
+              />
+            </label>
+            <label>
+              <span className={labelClass}>Anteckningar</span>
+              <input
+                className={inputClass}
+                value={draft.notes}
+                onChange={(event) => updateDraft({ notes: event.target.value })}
+              />
+            </label>
+          </div>
 
-          {fileUrl("mp3", draft.mp3_path) ? (
-            <a
-              className="text-xs text-amber-700 underline underline-offset-4 dark:text-amber-400"
-              href={fileUrl("mp3", draft.mp3_path)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Öppna MP3 ↗
-            </a>
-          ) : null}
-          {fileUrl("cover", draft.cover_path) ? (
-            <a
-              className="text-xs text-amber-700 underline underline-offset-4 dark:text-amber-400"
-              href={fileUrl("cover", draft.cover_path)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Öppna omslag ↗
-            </a>
-          ) : null}
-        </div>
+          <fieldset className="mt-4 rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
+            <legend className={labelClass}>Synlighet</legend>
 
-        <div className="mt-3 flex flex-wrap gap-2">
-          <button
-            type="submit"
-            className={primaryButtonClass}
-            disabled={isBusy}
-          >
-            {saving ? "Sparar…" : isNew ? "Skapa inspelning" : "Spara"}
-          </button>
-          {onCancel ? (
+            <label className="flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-amber-600 focus:ring-amber-500"
+                checked={draft.is_public}
+                onChange={(event) =>
+                  updateDraft({ is_public: event.target.checked })
+                }
+              />
+              <span>
+                Publik (visas på hemsidan)
+                <span className="block text-xs text-zinc-500 dark:text-zinc-400">
+                  Avmarkera för att dölja inspelningen på hemsidan. Inspelningen
+                  kan fortfarande spelas upp via direktlänk.
+                </span>
+              </span>
+            </label>
+
+            <label className="mt-3 flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-amber-600 focus:ring-amber-500"
+                checked={draft.is_primary}
+                onChange={(event) =>
+                  updateDraft({ is_primary: event.target.checked })
+                }
+              />
+              <span>
+                Huvudinspelning
+                <span className="block text-xs text-zinc-500 dark:text-zinc-400">
+                  Avgör vilken av de publika inspelningarna som spelas när flera
+                  finns. Döljer ingenting i sig.
+                </span>
+              </span>
+            </label>
+          </fieldset>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {UPLOAD_KINDS.map((kind) => (
+              <label
+                key={kind}
+                className={`${secondaryButtonClass} cursor-pointer`}
+              >
+                {uploading === kind
+                  ? "Laddar upp…"
+                  : `Ladda upp ${UPLOAD_LABEL[kind]}`}
+                <input
+                  type="file"
+                  className="hidden"
+                  accept={UPLOAD_ACCEPT[kind]}
+                  disabled={uploading !== null}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = "";
+                    if (file) void handleUpload(kind, file);
+                  }}
+                />
+              </label>
+            ))}
+
+            {fileUrl("mp3", draft.mp3_path) ? (
+              <a
+                className="text-xs text-amber-700 underline underline-offset-4 dark:text-amber-400"
+                href={fileUrl("mp3", draft.mp3_path)}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Öppna MP3 ↗
+              </a>
+            ) : null}
+            {fileUrl("cover", draft.cover_path) ? (
+              <a
+                className="text-xs text-amber-700 underline underline-offset-4 dark:text-amber-400"
+                href={fileUrl("cover", draft.cover_path)}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Öppna omslag ↗
+              </a>
+            ) : null}
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2">
             <button
-              type="button"
-              className={secondaryButtonClass}
-              onClick={onCancel}
+              type="submit"
+              className={primaryButtonClass}
               disabled={isBusy}
             >
-              Avbryt
+              {saving ? "Sparar…" : isNew ? "Skapa inspelning" : "Spara"}
             </button>
-          ) : null}
-          {!isNew ? (
-            <button
-              type="button"
-              className={dangerButtonClass}
-              onClick={() => void handleDelete()}
-              disabled={isBusy}
-            >
-              Ta bort
-            </button>
-          ) : null}
-        </div>
+            {onCancel ? (
+              <button
+                type="button"
+                className={secondaryButtonClass}
+                onClick={onCancel}
+                disabled={isBusy}
+              >
+                Avbryt
+              </button>
+            ) : null}
+            {!isNew ? (
+              <button
+                type="button"
+                className={dangerButtonClass}
+                onClick={() => void handleDelete()}
+                disabled={isBusy}
+              >
+                Ta bort
+              </button>
+            ) : null}
+          </div>
+        </form>
 
         <CreditsEditor
           recordingId={recording?.id ?? null}
@@ -577,6 +613,6 @@ export default function RecordingCard({
           onMusiciansChanged={onMusiciansChanged}
         />
       </div>
-    </form>
+    </div>
   );
 }

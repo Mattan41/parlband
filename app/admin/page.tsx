@@ -253,7 +253,11 @@ export default function AdminPage() {
         )}
 
         {!loading && !loadError ? (
-          <MusicianOverview songs={songs} musicians={musicians} />
+          <MusicianOverview
+            songs={songs}
+            musicians={musicians}
+            onMusiciansChanged={refreshMusicians}
+          />
         ) : null}
 
         <NewRecordingModal
