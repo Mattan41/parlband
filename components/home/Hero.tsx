@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { CONTACT_EMAIL } from "@/data/siteLinks";
 
 interface Props {
   /** Editable welcome line (site_content key `welcome_text`); may be empty. */
@@ -78,6 +79,16 @@ export default function Hero({ welcomeText }: Props) {
             {welcomeText}
           </p>
         ) : null}
+
+        <p className="mt-3 text-xs text-zinc-600 sm:text-sm dark:text-zinc-400">
+          Bokning & kontakt:{" "}
+          <a
+            href={`mailto:${CONTACT_EMAIL}`}
+            className="font-medium text-zinc-900 underline underline-offset-4 transition hover:text-black dark:text-zinc-200 dark:hover:text-white"
+          >
+            {CONTACT_EMAIL}
+          </a>
+        </p>
 
         <a
           href="#songlist"
