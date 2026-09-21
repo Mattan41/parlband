@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   adminJson,
   fileUrl,
@@ -83,6 +83,8 @@ interface Props {
   onChanged: () => Promise<void>;
   notify: (text: string, tone: "success" | "error") => void;
   onCancel?: () => void;
+  /** Reports whether the card is saving or uploading (used by the modal shell). */
+  onBusyChange?: (busy: boolean) => void;
 }
 
 export default function RecordingCard({
@@ -92,6 +94,7 @@ export default function RecordingCard({
   onChanged,
   notify,
   onCancel,
+  onBusyChange,
 }: Props) {
   // Seeded once. The parent section remounts after every reload (the
   // version-based key in app/admin/page.tsx), so the draft picks up fresh
@@ -101,8 +104,14 @@ export default function RecordingCard({
   );
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<AdminUploadKind | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const isNew = recording === null;
+  const isBusy = saving || uploading !== null;
+
+  useEffect(() => {
+    onBusyChange?.(isBusy);
+  }, [isBusy, onBusyChange]);
 
   function updateDraft(patch: Partial<RecordingDraft>) {
     setDraft((previous) => ({ ...previous, ...patch }));
@@ -112,13 +121,13 @@ export default function RecordingCard({
   function buildPayload(): Record<string, unknown> | null {
     const trimmedMp3 = draft.mp3_path.trim();
     if (!trimmedMp3) {
-      notify("mp3_path krävs (fylls i automatiskt av uppladdning).", "error");
+      setError("mp3_path krävs (fylls i automatiskt av uppladdning).");
       return null;
     }
 
     const trimmedYear = draft.year.trim();
     if (trimmedYear !== "" && !/^\d{1,4}$/.test(trimmedYear)) {
-      notify("År måste vara ett fyrsiffrigt heltal.", "error");
+      setError("År måste vara ett fyrsiffrigt heltal.");
       return null;
     }
 
@@ -143,6 +152,7 @@ export default function RecordingCard({
     if (!payload) return;
 
     setSaving(true);
+    setError(null);
     try {
       await adminJson("/api/admin/recordings", isNew ? "POST" : "PUT", payload);
       notify(
@@ -151,12 +161,10 @@ export default function RecordingCard({
       );
       if (isNew) onCancel?.();
       await onChanged();
-    } catch (error) {
-      notify(
-        error instanceof Error
-          ? error.message
-          : "Kunde inte spara inspelningen",
-        "error"
+    } catch (cause) {
+      // The modal stays open with the data entered so it can be corrected.
+      setError(
+        cause instanceof Error ? cause.message : "Kunde inte spara inspelningen"
       );
     } finally {
       setSaving(false);
@@ -220,18 +228,37 @@ export default function RecordingCard({
   return (
     <form
       onSubmit={handleSave}
-      className="rounded-md border border-zinc-200 bg-zinc-50/60 p-3 dark:border-zinc-800 dark:bg-zinc-950/40"
+      className="rounded-md border border-l-4 border-zinc-200 border-l-sky-500 bg-sky-50/40 p-3 transition focus-within:ring-1 focus-within:ring-sky-400 dark:border-zinc-800 dark:border-l-sky-500 dark:bg-sky-950/20 dark:focus-within:ring-sky-600"
     >
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-300">
-          {isNew ? "Ny inspelning" : `Inspelning #${recording.id}`}
-          {!isNew && recording.is_primary === 1 ? " · huvudinspelning" : ""}
-          {!isNew && recording.is_public === 0 ? " · dold" : ""}
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-800 dark:bg-sky-900/50 dark:text-sky-300">
+            {isNew ? "Ny inspelning" : "Inspelning"}
+          </span>
+          {!isNew && recording.is_primary === 1 ? (
+            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+              Huvudinspelning
+            </span>
+          ) : null}
+          {!isNew && recording.is_public === 0 ? (
+            <span className="rounded bg-zinc-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200">
+              Dold
+            </span>
+          ) : null}
+        </div>
         <span className="text-xs text-zinc-500 dark:text-zinc-400">
           {recording?.play_count ?? 0} spelningar (räknas automatiskt)
         </span>
       </div>
+
+      {error ? (
+        <p
+          role="alert"
+          className="mb-3 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
+        >
+          {error}
+        </p>
+      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <label>
@@ -318,7 +345,8 @@ export default function RecordingCard({
           <span>
             Publik (visas på hemsidan)
             <span className="block text-xs text-zinc-500 dark:text-zinc-400">
-              Avmarkera för att dölja inspelningen på hemsidan. Inspelningen kan fortfarande spelas upp via direktlänk.
+              Avmarkera för att dölja inspelningen på hemsidan. Inspelningen kan
+              fortfarande spelas upp via direktlänk.
             </span>
           </span>
         </label>
@@ -388,7 +416,7 @@ export default function RecordingCard({
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">
-        <button type="submit" className={primaryButtonClass} disabled={saving}>
+        <button type="submit" className={primaryButtonClass} disabled={isBusy}>
           {saving ? "Sparar…" : isNew ? "Skapa inspelning" : "Spara"}
         </button>
         {onCancel ? (
@@ -396,7 +424,7 @@ export default function RecordingCard({
             type="button"
             className={secondaryButtonClass}
             onClick={onCancel}
-            disabled={saving}
+            disabled={isBusy}
           >
             Avbryt
           </button>
@@ -406,7 +434,7 @@ export default function RecordingCard({
             type="button"
             className={dangerButtonClass}
             onClick={() => void handleDelete()}
-            disabled={saving}
+            disabled={isBusy}
           >
             Ta bort
           </button>

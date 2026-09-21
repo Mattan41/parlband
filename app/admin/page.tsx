@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import NewSongForm from "@/components/admin/NewSongForm";
+import NewRecordingModal from "@/components/admin/NewRecordingModal";
 import SongSection from "@/components/admin/SongSection";
 import {
   fetchAdminData,
@@ -25,13 +26,18 @@ interface Notice {
 export default function AdminPage() {
   const [songs, setSongs] = useState<AdminSong[]>([]);
   const [musicians, setMusicians] = useState<AdminMusician[]>([]);
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  /** Id of the single expanded song, or null when all are collapsed. */
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  /** Song whose "new recording" modal is open, or null when it is closed. */
+  const [recordingSongId, setRecordingSongId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   /**
    * Bumped after every successful reload so the editors remount with fresh
    * server data (their form state is seeded through useState initializers).
+   * Modal state deliberately lives above this key so a reload can never close
+   * an open modal or drop its input.
    */
   const [version, setVersion] = useState(0);
 
@@ -73,13 +79,28 @@ export default function AdminPage() {
     setNotice({ text, tone });
   }, []);
 
+  /** Only one song is expanded at a time. */
   const toggle = useCallback((id: string) => {
-    setExpanded((previous) => ({ ...previous, [id]: !previous[id] }));
+    setExpandedId((current) => (current === id ? null : id));
   }, []);
+
+  /** After creating a song, expand it so adding a recording is the next step. */
+  const handleSongCreated = useCallback(
+    async (songId: string) => {
+      setExpandedId(songId);
+      await reload();
+    },
+    [reload]
+  );
+
+  const recordingSong = useMemo(
+    () => songs.find((song) => song.id === recordingSongId) ?? null,
+    [songs, recordingSongId]
+  );
 
   return (
     <div className="min-h-full flex-1 bg-zinc-100 font-sans dark:bg-zinc-950">
-      <main className="mx-auto w-full max-w-5xl px-4 py-8">
+      <main className="mx-auto w-full max-w-6xl px-4 py-8">
         <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
@@ -111,7 +132,7 @@ export default function AdminPage() {
         ) : null}
 
         <div className="mb-6">
-          <NewSongForm onCreated={reload} notify={notify} />
+          <NewSongForm onCreated={handleSongCreated} notify={notify} />
         </div>
 
         {loading ? (
@@ -129,14 +150,23 @@ export default function AdminPage() {
                 key={`${song.id}-${version}`}
                 song={song}
                 musicians={musicians}
-                expanded={Boolean(expanded[song.id])}
+                expanded={expandedId === song.id}
                 onToggle={() => toggle(song.id)}
+                onAddRecording={() => setRecordingSongId(song.id)}
                 onChanged={reload}
                 notify={notify}
               />
             ))}
           </div>
         )}
+
+        <NewRecordingModal
+          song={recordingSong}
+          musicians={musicians}
+          onClose={() => setRecordingSongId(null)}
+          onChanged={reload}
+          notify={notify}
+        />
       </main>
     </div>
   );

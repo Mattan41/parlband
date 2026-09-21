@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { adminJson, type AdminCredit, type AdminMusician } from "@/data/admin";
 import {
   dangerButtonClass,
@@ -47,6 +47,8 @@ export default function CreditsEditor({
   const [newMusicianName, setNewMusicianName] = useState("");
   const [instrument, setInstrument] = useState("");
   const [busy, setBusy] = useState(false);
+  // Unique per editor instance: several recording cards may be mounted at once.
+  const instrumentListId = useId();
 
   async function handleAdd(event: React.FormEvent) {
     event.preventDefault();
@@ -214,12 +216,12 @@ export default function CreditsEditor({
               <span className={labelClass}>Instrument</span>
               <input
                 className={inputClass}
-                list="instrument-suggestions"
+                list={instrumentListId}
                 value={instrument}
                 onChange={(event) => setInstrument(event.target.value)}
                 placeholder="t.ex. Akustisk gitarr"
               />
-              <datalist id="instrument-suggestions">
+              <datalist id={instrumentListId}>
                 {INSTRUMENT_SUGGESTIONS.map((suggestion) => (
                   <option key={suggestion} value={suggestion} />
                 ))}

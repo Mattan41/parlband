@@ -5,6 +5,9 @@ without writing SQL or using the CLI. This document describes **what you can do*
 in the UI; for the schema see [DATABASE.md](./DATABASE.md) and for R2/CLI details
 see [UPLOADING.md](./UPLOADING.md).
 
+Songs carry an **amber** accent and recordings a **sky (blue)** accent, and only
+one song is expanded at a time, so it is always clear what is being edited.
+
 ## Access
 
 Cloudflare Access protects `parlband.kruskopf.org/admin*` **and**
@@ -38,11 +41,19 @@ destination can never leave the write endpoints open:
 
 ## Songs
 
-- **Create** a song with title, artist, `Text av` (lyricist), `Musik av`
-  (composer), lyrics text and an optional sheet music path.
+- **Create** a song with the **+ Ny låt** button. It opens a modal with a
+  short help text: fill in title, artist, `Text av` (lyricist), `Musik av`
+  (composer), lyrics text and an optional sheet music path. "Skapa låt" closes
+  the modal on success; "Avbryt", Esc or a click outside cancels.
 - The **id (slug)** is derived from the title and is used in file names. It may
   only contain `a-z`, `0-9` and hyphens.
 - **Edit** any of the fields on an existing song and press "Spara låt".
+  Only **one song is expanded at a time** – opening another collapses the
+  previous one.
+- If a save fails, the error is shown **inside the modal** and everything you
+  entered is kept, so it can be corrected without retyping.
+- After a new song is saved it is **expanded automatically**, so uploading notes
+  and adding the first recording is the visible next step.
 - A song only becomes **public** once it has a recording with an `mp3_path` that
   is also marked **Publik** – `GET /api/songs` filters out songs without one.
 
@@ -50,6 +61,11 @@ destination can never leave the write endpoints open:
 
 A song can have several recordings (e.g. studio + live).
 
+- **Create** a recording with **+ Ny inspelning** inside an expanded song. The
+  modal explains the flow: fill in the fields, optionally upload MP3/cover (the
+  upload fills in the path for you) and save. "Skapa inspelning" closes the
+  modal on success; "Avbryt", Esc or a click outside cancels, and a failed save
+  keeps the modal open with your input and shows the error there.
 - Fields: album, studio, year, engineer, notes, mp3 path, wav path, cover path.
 - **Publik** (`is_public`): whether the recording may be shown on the site.
   Uncheck it to hide a take (e.g. while re-recording) without deleting it. A
@@ -76,6 +92,8 @@ separate save is needed for the file.
 | Ladda upp omslag      | `cover` | `parlband/images/` | `<song-id>.<jpg\|png\|webp\|avif\|gif>` | 10 MB |
 | Ladda upp noter (PDF) | `pdf`   | `parlband/pdf/`    | `<song-id>.pdf`                         | 20 MB |
 
+- In the **new recording** modal an upload fills in the path field but cannot
+  link the file yet – press "Skapa inspelning" to store the recording.
 - MP3, WAV and cover are uploaded from a **recording** card; the PDF from the
   song's **Låtinfo** section.
 - Uploading a file with the same name **replaces** the previous object. Because

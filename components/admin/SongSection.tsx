@@ -16,6 +16,8 @@ interface Props {
   musicians: AdminMusician[];
   expanded: boolean;
   onToggle: () => void;
+  /** Opens the parent-owned "new recording" modal for this song. */
+  onAddRecording: () => void;
   onChanged: () => Promise<void>;
   notify: (text: string, tone: "success" | "error") => void;
 }
@@ -25,6 +27,7 @@ export default function SongSection({
   musicians,
   expanded,
   onToggle,
+  onAddRecording,
   onChanged,
   notify,
 }: Props) {
@@ -33,7 +36,6 @@ export default function SongSection({
   // server data without a prop-to-state syncing effect.
   const [draft, setDraft] = useState<SongDraft>(() => toSongDraft(song));
   const [saving, setSaving] = useState(false);
-  const [addingRecording, setAddingRecording] = useState(false);
 
   function updateDraft(patch: Partial<SongDraft>) {
     setDraft((previous) => ({ ...previous, ...patch }));
@@ -69,18 +71,27 @@ export default function SongSection({
     song.recordings[0];
 
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60">
+    <section className="overflow-hidden rounded-lg border border-l-4 border-zinc-200 border-l-amber-500 bg-white shadow-sm dark:border-zinc-800 dark:border-l-amber-500 dark:bg-zinc-900/60">
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={expanded}
-        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+        className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition ${
+          expanded
+            ? "bg-amber-50/70 dark:bg-amber-950/20"
+            : "hover:bg-zinc-50 dark:hover:bg-zinc-800/40"
+        }`}
       >
         <span className="min-w-0">
-          <span className="block truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-            {song.title}
+          <span className="flex items-center gap-2">
+            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+              Låt
+            </span>
+            <span className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+              {song.title}
+            </span>
           </span>
-          <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">
+          <span className="mt-0.5 block truncate text-xs text-zinc-500 dark:text-zinc-400">
             {song.id} · {song.recordings.length} inspelning(ar)
             {primary?.year ? ` · ${primary.year}` : ""}
           </span>
@@ -91,81 +102,73 @@ export default function SongSection({
       </button>
 
       {expanded ? (
-        <div className="border-t border-zinc-200 px-4 py-3 dark:border-zinc-800">
-          <form onSubmit={handleSave}>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-              Låtinfo
-            </h3>
-            <SongFields
-              draft={draft}
-              onChange={updateDraft}
-              idPrefix={`song-${song.id}`}
-            />
-
-            <SheetMusicUpload
-              songId={song.id}
-              path={draft.sheet_music_path}
-              onChange={(path) => updateDraft({ sheet_music_path: path })}
-              onChanged={onChanged}
-              notify={notify}
-            />
-
-            <div className="mt-3">
-              <button
-                type="submit"
-                className={primaryButtonClass}
-                disabled={saving}
-              >
-                {saving ? "Sparar…" : "Spara låt"}
-              </button>
-            </div>
-          </form>
-
-          <div className="mt-5">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                Inspelningar
+        <div className="border-t border-zinc-200 px-4 py-4 dark:border-zinc-800">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+            <form onSubmit={handleSave}>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                Låtinfo
+                <span className="ml-1 normal-case tracking-normal text-amber-700 dark:text-amber-400">
+                  · {song.title}
+                </span>
               </h3>
-              {!addingRecording ? (
+              <SongFields
+                draft={draft}
+                onChange={updateDraft}
+                idPrefix={`song-${song.id}`}
+              />
+
+              <SheetMusicUpload
+                songId={song.id}
+                path={draft.sheet_music_path}
+                onChange={(path) => updateDraft({ sheet_music_path: path })}
+                onChanged={onChanged}
+                notify={notify}
+              />
+
+              <div className="mt-3">
+                <button
+                  type="submit"
+                  className={primaryButtonClass}
+                  disabled={saving}
+                >
+                  {saving ? "Sparar…" : "Spara låt"}
+                </button>
+              </div>
+            </form>
+
+            <div className="lg:border-l lg:border-zinc-200 lg:pl-6 dark:lg:border-zinc-800">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                  Inspelningar
+                </h3>
                 <button
                   type="button"
                   className={secondaryButtonClass}
-                  onClick={() => setAddingRecording(true)}
+                  onClick={onAddRecording}
                 >
                   + Ny inspelning
                 </button>
-              ) : null}
-            </div>
+              </div>
 
-            <div className="space-y-3">
-              {song.recordings.map((recording) => (
-                <RecordingCard
-                  key={recording.id}
-                  song={song}
-                  recording={recording}
-                  musicians={musicians}
-                  onChanged={onChanged}
-                  notify={notify}
-                />
-              ))}
+              <div className="space-y-3">
+                {song.recordings.map((recording) => (
+                  <RecordingCard
+                    key={recording.id}
+                    song={song}
+                    recording={recording}
+                    musicians={musicians}
+                    onChanged={onChanged}
+                    notify={notify}
+                  />
+                ))}
 
-              {addingRecording ? (
-                <RecordingCard
-                  song={song}
-                  recording={null}
-                  musicians={musicians}
-                  onChanged={onChanged}
-                  notify={notify}
-                  onCancel={() => setAddingRecording(false)}
-                />
-              ) : null}
-
-              {song.recordings.length === 0 && !addingRecording ? (
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  Inga inspelningar ännu. Lägg till en för att låten ska synas
-                  publikt.
-                </p>
-              ) : null}
+                {song.recordings.length === 0 ? (
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    Inga inspelningar ännu. Lägg till en för att låten ska synas
+                    publikt.
+                  </p>
+                ) : null}
+              </div>
             </div>
           </div>
         </div>
