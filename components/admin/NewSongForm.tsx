@@ -21,6 +21,17 @@ interface Props {
   notify: (text: string, tone: "success" | "error") => void;
 }
 
+function draftEquals(a: SongDraft, b: SongDraft): boolean {
+  return (
+    a.title === b.title &&
+    a.artist === b.artist &&
+    a.lyrics_by === b.lyrics_by &&
+    a.music_by === b.music_by &&
+    a.lyrics === b.lyrics &&
+    a.sheet_music_path === b.sheet_music_path
+  );
+}
+
 /** Trigger button + modal for creating a brand-new song. */
 export default function NewSongForm({ onCreated, notify }: Props) {
   const [open, setOpen] = useState(false);
@@ -29,6 +40,8 @@ export default function NewSongForm({ onCreated, notify }: Props) {
   const [idEdited, setIdEdited] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isDirty = songId !== "" || !draftEquals(draft, emptySongDraft);
 
   function updateDraft(patch: Partial<SongDraft>) {
     if (patch.title !== undefined && !idEdited) {
@@ -49,8 +62,12 @@ export default function NewSongForm({ onCreated, notify }: Props) {
     setOpen(true);
   }
 
+  /** Closing always goes through here, so unsaved input is never dropped silently. */
   function closeModal() {
     if (saving) return;
+    if (isDirty && !window.confirm("Du har osparade ändringar. Stäng ändå?")) {
+      return;
+    }
     reset();
     setOpen(false);
   }

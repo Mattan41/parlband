@@ -7,6 +7,8 @@ see [UPLOADING.md](./UPLOADING.md).
 
 Songs carry an **amber** accent and recordings a **sky (blue)** accent, and only
 one song is expanded at a time, so it is always clear what is being edited.
+Recordings are a nested accordion under the song, and a collapsed recording row
+shows its year/album and status badges.
 
 ## Access
 
@@ -52,6 +54,8 @@ destination can never leave the write endpoints open:
   previous one.
 - If a save fails, the error is shown **inside the modal** and everything you
   entered is kept, so it can be corrected without retyping.
+- Closing the modal with unsaved input (Esc, click outside, × or Avbryt) asks
+  "Du har osparade ändringar. Stäng ändå?" first.
 - After a new song is saved it is **expanded automatically**, so uploading notes
   and adding the first recording is the visible next step.
 - A song only becomes **public** once it has a recording with an `mp3_path` that
@@ -65,7 +69,12 @@ A song can have several recordings (e.g. studio + live).
   modal explains the flow: fill in the fields, optionally upload MP3/cover (the
   upload fills in the path for you) and save. "Skapa inspelning" closes the
   modal on success; "Avbryt", Esc or a click outside cancels, and a failed save
-  keeps the modal open with your input and shows the error there.
+  keeps the modal open with your input and shows the error there. Closing
+  with unsaved input asks "Du har osparade ändringar. Stäng ändå?" first.
+- The **newly created recording is expanded automatically**.
+- Recordings are an **accordion**: only one is open per song, and a collapsed
+  row shows year, album and the Huvudinspelning/Dold badges so the takes stay
+  easy to tell apart.
 - Fields: album, studio, year, engineer, notes, mp3 path, wav path, cover path.
 - **Publik** (`is_public`): whether the recording may be shown on the site.
   Uncheck it to hide a take (e.g. while re-recording) without deleting it. A
@@ -79,6 +88,19 @@ A song can have several recordings (e.g. studio + live).
   never set through the UI.
 - **Delete** removes the row and its credits, but leaves the R2 files in the
   bucket. This is intentional: storage is cheap and it avoids accidental data loss.
+
+## Feedback and errors
+
+- All notices are **toasts** fixed at the bottom of the screen, so they stay
+  visible wherever you have scrolled. Success messages dismiss themselves;
+  errors stay until you close them.
+- Feedback that belongs to an open modal or a card (save errors, upload status,
+  credits) is shown **inline** there instead – a native dialog sits above
+  everything, so a toast would be hidden behind it.
+- The initial load retries once automatically. If it still fails you get
+  **"Försök igen"**, and when the session has expired (401/403) a distinct
+  **"Sessionen har gått ut"** message with **"Ladda om"**. An offline browser and
+  an expired session share the same "check the network / sign in again" message.
 
 ## File uploads
 
@@ -119,6 +141,21 @@ separate save is needed for the file.
   played on it.
 - Musicians must exist in the `musicians` table; pick one from the credits editor.
 - Credits describe the recording, not the song.
+- Feedback appears **inline in the recording card** ("Medverkande tillagd"), not
+  in a toast.
+- Adding a combo that already exists returns `409` and shows "Medverkande finns
+  redan på inspelningen." – the existing credit is kept.
+- A brand-new musician is created automatically the first time the name is used,
+  and the musician dropdown is refreshed immediately, so a later failure cannot
+  leave the list stale.
+
+## Musiker
+
+- The **Musiker / Översikt** section below the songs is a read-only view of who
+  is registered and where they play. It is derived from the recording credits
+  already loaded by the page (no extra API call): each musician is listed with
+  their credits grouped by song/recording, and recordings that still have **no**
+  credits are listed separately.
 
 ## Related documentation
 

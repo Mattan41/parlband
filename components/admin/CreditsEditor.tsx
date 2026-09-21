@@ -1,7 +1,12 @@
 "use client";
 
 import { useId, useState } from "react";
-import { adminJson, type AdminCredit, type AdminMusician } from "@/data/admin";
+import {
+  AdminApiError,
+  adminJson,
+  type AdminCredit,
+  type AdminMusician,
+} from "@/data/admin";
 import {
   dangerButtonClass,
   inputClass,
@@ -28,12 +33,27 @@ const INSTRUMENT_SUGGESTIONS = [
 /** Sentinel value for the "create a new musician" option. */
 const NEW_MUSICIAN = "__new__";
 
+interface Feedback {
+  text: string;
+  tone: "success" | "error";
+}
+
+/** Map server/network failures to Swedish messages the band understands. */
+function describeError(cause: unknown, fallback: string): string {
+  if (cause instanceof AdminApiError) {
+    if (cause.status === 409) return "Medverkande finns redan på inspelningen.";
+    if (cause.status === 404)
+      return "Inspelningen eller musikern finns inte längre – ladda om sidan.";
+  }
+  return cause instanceof Error ? cause.message : fallback;
+}
+
 interface Props {
   recordingId: number | null;
   credits: AdminCredit[];
   musicians: AdminMusician[];
   onChanged: () => Promise<void>;
-  notify: (text: string, tone: "success" | "error") => void;
+  onMusiciansChanged?: () => Promise<void>;
 }
 
 export default function CreditsEditor({
@@ -41,12 +61,13 @@ export default function CreditsEditor({
   credits,
   musicians,
   onChanged,
-  notify,
+  onMusiciansChanged,
 }: Props) {
   const [musicianId, setMusicianId] = useState<string>("");
   const [newMusicianName, setNewMusicianName] = useState("");
   const [instrument, setInstrument] = useState("");
   const [busy, setBusy] = useState(false);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
   // Unique per editor instance: several recording cards may be mounted at once.
   const instrumentListId = useId();
 
@@ -56,59 +77,53 @@ export default function CreditsEditor({
 
     const trimmedInstrument = instrument.trim();
     if (!trimmedInstrument) {
-      notify("Ange ett instrument.", "error");
+      setFeedback({ text: "Ange ett instrument.", tone: "error" });
+      return;
+    }
+    if (musicianId === "") {
+      setFeedback({ text: "Välj en musiker.", tone: "error" });
+      return;
+    }
+    if (musicianId === NEW_MUSICIAN && !newMusicianName.trim()) {
+      setFeedback({ text: "Ange namnet på den nya musikern.", tone: "error" });
       return;
     }
 
-    let resolvedMusicianId: number | null = null;
-    if (musicianId === NEW_MUSICIAN) {
-      const name = newMusicianName.trim();
-      if (!name) {
-        notify("Ange namnet på den nya musikern.", "error");
-        return;
-      }
-      try {
-        setBusy(true);
+    setBusy(true);
+    setFeedback(null);
+    try {
+      let resolvedMusicianId: number;
+      if (musicianId === NEW_MUSICIAN) {
+        const name = newMusicianName.trim();
         const created = await adminJson<{ musician: AdminMusician }>(
           "/api/admin/musicians",
           "POST",
           { name }
         );
         resolvedMusicianId = created.musician.id;
-      } catch (error) {
-        notify(
-          error instanceof Error ? error.message : "Kunde inte skapa musikern",
-          "error"
-        );
-        setBusy(false);
-        return;
+        // Show the (possibly already existing) musician in the dropdown and
+        // refresh the list, so a later failure cannot leave it stale.
+        setMusicianId(String(resolvedMusicianId));
+        setNewMusicianName("");
+        await onMusiciansChanged?.();
+      } else {
+        resolvedMusicianId = Number(musicianId);
       }
-    } else {
-      resolvedMusicianId = Number(musicianId);
-    }
 
-    if (!resolvedMusicianId) {
-      notify("Välj en musiker.", "error");
-      setBusy(false);
-      return;
-    }
-
-    try {
       await adminJson("/api/admin/credits", "POST", {
         recording_id: recordingId,
         musician_id: resolvedMusicianId,
         instrument: trimmedInstrument,
       });
-      notify("Credit tillagd.", "success");
+      setFeedback({ text: "Medverkande tillagd.", tone: "success" });
       setInstrument("");
-      setNewMusicianName("");
       setMusicianId("");
       await onChanged();
-    } catch (error) {
-      notify(
-        error instanceof Error ? error.message : "Kunde inte lägga till credit",
-        "error"
-      );
+    } catch (cause) {
+      setFeedback({
+        text: describeError(cause, "Kunde inte lägga till medverkande."),
+        tone: "error",
+      });
     } finally {
       setBusy(false);
     }
@@ -124,14 +139,15 @@ export default function CreditsEditor({
 
     try {
       setBusy(true);
+      setFeedback(null);
       await adminJson(`/api/admin/credits?${params.toString()}`, "DELETE");
-      notify("Credit borttagen.", "success");
+      setFeedback({ text: "Medverkande borttaget.", tone: "success" });
       await onChanged();
-    } catch (error) {
-      notify(
-        error instanceof Error ? error.message : "Kunde inte ta bort credit",
-        "error"
-      );
+    } catch (cause) {
+      setFeedback({
+        text: describeError(cause, "Kunde inte ta bort medverkande."),
+        tone: "error",
+      });
     } finally {
       setBusy(false);
     }
@@ -148,6 +164,19 @@ export default function CreditsEditor({
         </p>
       ) : (
         <>
+          {feedback ? (
+            <p
+              role={feedback.tone === "error" ? "alert" : "status"}
+              className={`mt-1 rounded-md border px-2 py-1 text-xs ${
+                feedback.tone === "error"
+                  ? "border-red-300 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
+                  : "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300"
+              }`}
+            >
+              {feedback.text}
+            </p>
+          ) : null}
+
           {credits.length === 0 ? (
             <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
               Inga medverkande registrerade.
@@ -233,7 +262,7 @@ export default function CreditsEditor({
               className={primaryButtonClass}
               disabled={busy}
             >
-              Lägg till
+              {busy ? "Sparar…" : "Lägg till"}
             </button>
           </form>
         </>

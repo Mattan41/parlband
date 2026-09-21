@@ -10,6 +10,9 @@ interface Props {
   song: AdminSong | null;
   musicians: AdminMusician[];
   onClose: () => void;
+  /** Called with the new recording's id after a successful create. */
+  onCreated?: (recordingId: number) => void;
+  onMusiciansChanged?: () => Promise<void>;
   onChanged: () => Promise<void>;
   notify: (text: string, tone: "success" | "error") => void;
 }
@@ -19,16 +22,36 @@ export default function NewRecordingModal({
   song,
   musicians,
   onClose,
+  onCreated,
+  onMusiciansChanged,
   onChanged,
   notify,
 }: Props) {
-  // The busy flag lives here so the modal shell can keep Esc/backdrop from
-  // closing it while an upload or save is in flight.
+  // `busy` keeps Esc/backdrop from closing while a request runs; `dirty` makes
+  // the other close paths ask before dropping unsaved input.
   const [busy, setBusy] = useState(false);
+  const [dirty, setDirty] = useState(false);
 
-  function handleClose() {
+  function reset() {
     setBusy(false);
+    setDirty(false);
+  }
+
+  /** Esc, backdrop, × and Avbryt all land here. */
+  function handleClose() {
+    if (busy) return;
+    if (dirty && !window.confirm("Du har osparade ändringar. Stäng ändå?")) {
+      return;
+    }
+    reset();
     onClose();
+  }
+
+  /** A successful save closes without the unsaved-changes prompt. */
+  function handleCreated(recordingId: number) {
+    reset();
+    onClose();
+    onCreated?.(recordingId);
   }
 
   return (
@@ -47,7 +70,10 @@ export default function NewRecordingModal({
           onChanged={onChanged}
           notify={notify}
           onCancel={handleClose}
+          onCreated={handleCreated}
           onBusyChange={setBusy}
+          onDirtyChange={setDirty}
+          onMusiciansChanged={onMusiciansChanged}
         />
       ) : null}
     </AdminModal>
