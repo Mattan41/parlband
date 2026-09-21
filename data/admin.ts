@@ -79,19 +79,46 @@ export function slugify(value: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+/**
+ * Error thrown for any failed admin request. `status` is the HTTP status, or 0
+ * when the response body could not be parsed at all (e.g. an expired Access
+ * session redirected the request to an HTML login page instead of JSON).
+ */
+export class AdminApiError extends Error {
+  readonly status: number;
+  readonly code: string | null;
+
+  constructor(message: string, status: number, code: string | null = null) {
+    super(message);
+    this.name = "AdminApiError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
 /** Shared response handling for the admin endpoints. */
 async function readResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     let message = `Begäran misslyckades (${response.status})`;
+    let code: string | null = null;
     try {
-      const payload = (await response.json()) as { error?: string };
+      const payload = (await response.json()) as {
+        error?: string;
+        code?: string;
+      };
       if (payload?.error) message = payload.error;
+      if (typeof payload?.code === "string") code = payload.code;
     } catch {
       // Keep the generic message when the body is not JSON.
     }
-    throw new Error(message);
+    throw new AdminApiError(message, response.status, code);
   }
-  return (await response.json()) as T;
+
+  try {
+    return (await response.json()) as T;
+  } catch {
+    throw new AdminApiError("Ogiltigt svar från servern", 0);
+  }
 }
 
 export function adminGet<T>(url: string): Promise<T> {

@@ -13,116 +13,162 @@ import {
   primaryButtonClass,
   secondaryButtonClass,
 } from "./adminStyles";
+import AdminModal from "./AdminModal";
 
 interface Props {
-  onCreated: () => Promise<void>;
+  /** Called with the new song id after a successful create so the parent can expand it. */
+  onCreated: (songId: string) => Promise<void>;
   notify: (text: string, tone: "success" | "error") => void;
 }
 
-/** Collapsible form for creating a brand-new song. */
+function draftEquals(a: SongDraft, b: SongDraft): boolean {
+  return (
+    a.title === b.title &&
+    a.artist === b.artist &&
+    a.lyrics_by === b.lyrics_by &&
+    a.music_by === b.music_by &&
+    a.lyrics === b.lyrics &&
+    a.sheet_music_path === b.sheet_music_path
+  );
+}
+
+/** Trigger button + modal for creating a brand-new song. */
 export default function NewSongForm({ onCreated, notify }: Props) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<SongDraft>(emptySongDraft);
   const [songId, setSongId] = useState("");
   const [idEdited, setIdEdited] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const isDirty = songId !== "" || !draftEquals(draft, emptySongDraft);
 
   function updateDraft(patch: Partial<SongDraft>) {
-    setDraft((previous) => {
-      const next = { ...previous, ...patch };
-      if (patch.title !== undefined && !idEdited) {
-        setSongId(slugify(patch.title));
-      }
-      return next;
-    });
+    if (patch.title !== undefined && !idEdited) {
+      setSongId(slugify(patch.title));
+    }
+    setDraft((previous) => ({ ...previous, ...patch }));
   }
 
   function reset() {
     setDraft(emptySongDraft);
     setSongId("");
     setIdEdited(false);
+    setError(null);
+  }
+
+  function openModal() {
+    reset();
+    setOpen(true);
+  }
+
+  /** Closing always goes through here, so unsaved input is never dropped silently. */
+  function closeModal() {
+    if (saving) return;
+    if (isDirty && !window.confirm("Du har osparade ändringar. Stäng ändå?")) {
+      return;
+    }
+    reset();
+    setOpen(false);
   }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!songId) {
-      notify("Ange ett id (slug) för låten.", "error");
+      setError("Ange ett id (slug) för låten.");
       return;
     }
 
     setSaving(true);
+    setError(null);
     try {
       await adminJson("/api/admin/songs", "POST", {
         id: songId,
         ...toSongPayload(draft),
       });
       notify(`Låten "${draft.title}" skapades.`, "success");
+      const createdId = songId;
       reset();
       setOpen(false);
-      await onCreated();
-    } catch (error) {
-      notify(
-        error instanceof Error ? error.message : "Kunde inte skapa låten",
-        "error"
+      await onCreated(createdId);
+    } catch (cause) {
+      // The modal stays open with the entered data so it can be corrected.
+      setError(
+        cause instanceof Error ? cause.message : "Kunde inte skapa låten"
       );
     } finally {
       setSaving(false);
     }
   }
 
-  if (!open) {
-    return (
-      <button className={primaryButtonClass} onClick={() => setOpen(true)}>
+  return (
+    <>
+      <button type="button" className={primaryButtonClass} onClick={openModal}>
         + Ny låt
       </button>
-    );
-  }
 
-  return (
-    <form
-      onSubmit={handleSubmit}
-      className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60"
-    >
-      <h2 className="mb-3 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-        Ny låt
-      </h2>
+      <AdminModal
+        open={open}
+        title="Ny låt"
+        help="Skapa en ny låt i katalogen. Fyll i titel, upphovspersoner och text – id:t (slug) föreslås från titeln och används i filnamn. Efter att låten sparats öppnas den så att du kan lägga upp noter (PDF) och lägga till inspelningar."
+        busy={saving}
+        onClose={closeModal}
+      >
+        <form onSubmit={handleSubmit}>
+          <div className="mb-3 grid gap-3 sm:grid-cols-2">
+            <label>
+              <span className={labelClass}>
+                Id (slug, används i filsökvägar)
+              </span>
+              <input
+                className={inputClass}
+                value={songId}
+                onChange={(event) => {
+                  setIdEdited(true);
+                  setSongId(event.target.value);
+                }}
+                placeholder="t.ex. ny-lat"
+              />
+            </label>
+            <p className="self-end text-xs text-zinc-500 dark:text-zinc-400">
+              Föreslås från titeln. Får bara innehålla a-z, 0-9 och bindestreck.
+            </p>
+          </div>
 
-      <div className="mb-3 grid gap-3 sm:grid-cols-2">
-        <label>
-          <span className={labelClass}>Id (slug, används i filsökvägar)</span>
-          <input
-            className={inputClass}
-            value={songId}
-            onChange={(event) => {
-              setIdEdited(true);
-              setSongId(event.target.value);
-            }}
-            placeholder="t.ex. ny-lat"
+          <SongFields
+            draft={draft}
+            onChange={updateDraft}
+            idPrefix="new-song"
           />
-        </label>
-        <p className="self-end text-xs text-zinc-500 dark:text-zinc-400">
-          Föreslås från titeln. Får bara innehålla a-z, 0-9 och bindestreck.
-        </p>
-      </div>
 
-      <SongFields draft={draft} onChange={updateDraft} idPrefix="new-song" />
+          {error ? (
+            <p
+              role="alert"
+              className="mt-3 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
+            >
+              {error}
+            </p>
+          ) : null}
 
-      <div className="mt-4 flex gap-2">
-        <button type="submit" className={primaryButtonClass} disabled={saving}>
-          {saving ? "Sparar…" : "Skapa låt"}
-        </button>
-        <button
-          type="button"
-          className={secondaryButtonClass}
-          onClick={() => {
-            reset();
-            setOpen(false);
-          }}
-          disabled={saving}
-        >
-          Avbryt
-        </button>
-      </div>
-    </form>
+          <div className="mt-4 flex gap-2">
+            <button
+              type="submit"
+              className={primaryButtonClass}
+              disabled={saving}
+            >
+              {saving ? "Sparar…" : "Skapa låt"}
+            </button>
+            <button
+              type="button"
+              className={secondaryButtonClass}
+              onClick={closeModal}
+              disabled={saving}
+            >
+              Avbryt
+            </button>
+          </div>
+        </form>
+      </AdminModal>
+    </>
   );
 }

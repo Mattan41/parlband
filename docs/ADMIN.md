@@ -5,6 +5,11 @@ without writing SQL or using the CLI. This document describes **what you can do*
 in the UI; for the schema see [DATABASE.md](./DATABASE.md) and for R2/CLI details
 see [UPLOADING.md](./UPLOADING.md).
 
+Songs carry an **amber** accent and recordings a **sky (blue)** accent, and only
+one song is expanded at a time, so it is always clear what is being edited.
+Recordings are a nested accordion under the song, and a collapsed recording row
+shows its year/album and status badges.
+
 ## Access
 
 Cloudflare Access protects `parlband.kruskopf.org/admin*` **and**
@@ -38,11 +43,21 @@ destination can never leave the write endpoints open:
 
 ## Songs
 
-- **Create** a song with title, artist, `Text av` (lyricist), `Musik av`
-  (composer), lyrics text and an optional sheet music path.
+- **Create** a song with the **+ Ny låt** button. It opens a modal with a
+  short help text: fill in title, artist, `Text av` (lyricist), `Musik av`
+  (composer), lyrics text and an optional sheet music path. "Skapa låt" closes
+  the modal on success; "Avbryt", Esc or a click outside cancels.
 - The **id (slug)** is derived from the title and is used in file names. It may
   only contain `a-z`, `0-9` and hyphens.
 - **Edit** any of the fields on an existing song and press "Spara låt".
+  Only **one song is expanded at a time** – opening another collapses the
+  previous one.
+- If a save fails, the error is shown **inside the modal** and everything you
+  entered is kept, so it can be corrected without retyping.
+- Closing the modal with unsaved input (Esc, click outside, × or Avbryt) asks
+  "Du har osparade ändringar. Stäng ändå?" first.
+- After a new song is saved it is **expanded automatically**, so uploading notes
+  and adding the first recording is the visible next step.
 - A song only becomes **public** once it has a recording with an `mp3_path` that
   is also marked **Publik** – `GET /api/songs` filters out songs without one.
 
@@ -50,6 +65,17 @@ destination can never leave the write endpoints open:
 
 A song can have several recordings (e.g. studio + live).
 
+- **Create** a recording with **+ Ny inspelning** inside an expanded song. The
+  modal explains the flow: fill in the fields, optionally upload MP3/cover (the
+  upload fills in the path for you) and save. "Skapa inspelning" closes the
+  modal on success; "Avbryt", Esc or a click outside cancels, and a failed save
+  keeps the modal open with your input and shows the error there. Closing
+  with unsaved input asks "Du har osparade ändringar. Stäng ändå?" first.
+- The **newly created recording is expanded automatically**.
+- Recordings are an **accordion**: only one is open per song, and a collapsed
+  row shows year, album, the Huvudinspelning/Dold badges, the play count and a
+  compact credits summary (e.g. `Mats: Elbas · Nova: Sång`) so the takes stay
+  easy to tell apart.
 - Fields: album, studio, year, engineer, notes, mp3 path, wav path, cover path.
 - **Publik** (`is_public`): whether the recording may be shown on the site.
   Uncheck it to hide a take (e.g. while re-recording) without deleting it. A
@@ -64,6 +90,19 @@ A song can have several recordings (e.g. studio + live).
 - **Delete** removes the row and its credits, but leaves the R2 files in the
   bucket. This is intentional: storage is cheap and it avoids accidental data loss.
 
+## Feedback and errors
+
+- All notices are **toasts** fixed at the bottom of the screen, so they stay
+  visible wherever you have scrolled. Success messages dismiss themselves;
+  errors stay until you close them.
+- Feedback that belongs to an open modal or a card (save errors, upload status,
+  credits) is shown **inline** there instead – a native dialog sits above
+  everything, so a toast would be hidden behind it.
+- The initial load retries once automatically. If it still fails you get
+  **"Försök igen"**, and when the session has expired (401/403) a distinct
+  **"Sessionen har gått ut"** message with **"Ladda om"**. An offline browser and
+  an expired session share the same "check the network / sign in again" message.
+
 ## File uploads
 
 Upload buttons fill in the matching path field and save it immediately, so no
@@ -76,6 +115,8 @@ separate save is needed for the file.
 | Ladda upp omslag      | `cover` | `parlband/images/` | `<song-id>.<jpg\|png\|webp\|avif\|gif>` | 10 MB |
 | Ladda upp noter (PDF) | `pdf`   | `parlband/pdf/`    | `<song-id>.pdf`                         | 20 MB |
 
+- In the **new recording** modal an upload fills in the path field but cannot
+  link the file yet – press "Skapa inspelning" to store the recording.
 - MP3, WAV and cover are uploaded from a **recording** card; the PDF from the
   song's **Låtinfo** section.
 - Uploading a file with the same name **replaces** the previous object. Because
@@ -101,6 +142,36 @@ separate save is needed for the file.
   played on it.
 - Musicians must exist in the `musicians` table; pick one from the credits editor.
 - Credits describe the recording, not the song.
+- The credits editor is its **own bordered block** with the note
+  "Sparas direkt – du behöver inte trycka Spara": **Lägg till**/**Ta bort** save
+  immediately, while **Spara** only applies to the recording fields above it.
+- Feedback appears **inline in the recording card** ("Medverkande tillagd"), not
+  in a toast.
+- Adding a combo that already exists returns `409` and shows "Medverkande finns
+  redan på inspelningen." – the existing credit is kept.
+- A brand-new musician is created automatically the first time the name is used,
+  and the musician dropdown is refreshed immediately, so a later failure cannot
+  leave the list stale.
+
+## Musiker
+
+- The **Musiker / Översikt** section below the songs is a read-only view of who
+  is registered and where they play. It is derived from the recording credits
+  already loaded by the page (no extra API call): each musician is listed with
+  their credits grouped by song/recording, and recordings that still have **no**
+  credits are listed separately.
+- **+ Ny musiker** in that section adds a name through `POST /api/admin/musicians`
+  with inline feedback and refreshes the list without a page reload. The endpoint
+  is idempotent (case-insensitive), so an already-registered name is reused
+  rather than duplicated.
+
+## Implementation note
+
+Never nest one `<form>` inside another in the admin UI. A nested form is invalid,
+so the browser does not route its submit through React and falls back to a native
+GET submit – the page navigates to `/admin?` and reloads, losing all state. Each
+editor owns its own form: the recording fields/actions are one form, and the
+credits editor (and every other sub-editor) sits next to it, not inside it.
 
 ## Related documentation
 
