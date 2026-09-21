@@ -70,16 +70,19 @@ npm run db:reset     # wipe local D1, re-apply the schema and seeds.sql
 ```
 app/                 App Router routes
   layout.tsx         root layout: fonts, metadata, <StickyPlayer>, SW registration
-  page.tsx           / – fetches /api/songs → <Hero> + <SongList>
+  page.tsx           / – hero, Kommande spelningar (hidden when empty) and the tracklist
   texter/page.tsx    /texter – lyrics & chords; deep-links via ?song=<id>
-  admin/page.tsx     /admin – editor UI (Cloudflare Access)
+  about/page.tsx     /about – "Om oss"; heading + body from GET /api/content
+  admin/page.tsx     /admin – catalogue editor (Cloudflare Access)
+  admin/spelningar/page.tsx  /admin/spelningar – gig calendar editor
+  admin/about/page.tsx     /admin/about – editor for the welcome text + "Om oss"
   icon.png           app/favicon icon, served at /icon.png (rendered from public/pwa-icon.svg)
   robots.ts          /robots.txt (static export)
   sitemap.ts         /sitemap.xml (static export)
-components/          shared UI (SongRow, StickyPlayer, ServiceWorkerRegistrar) + home/ and admin/ features
-data/                API types and helpers (songs.ts, admin.ts)
+components/          shared UI (PublicShell, SiteNav, StreamingLinks, SongRow, StickyPlayer) + home/, about/, admin/
+data/                API types and helpers (songs.ts, gigs.ts, content.ts, admin.ts, siteLinks.ts)
 store/               Zustand player state (playerStore.ts)
-functions/api/       Pages Functions: songs, plays, admin CRUD + upload
+functions/api/       Pages Functions: songs, plays, downloads, content, gigs, admin CRUD + upload
   admin/_middleware.ts  Cloudflare Access JWT guard for /api/admin/*
 public/
   manifest.json      PWA web app manifest
@@ -87,17 +90,20 @@ public/
   icons/             192/512 px PWA icons + maskable variant
   pwa-icon.svg       vector source for the icons
 migrations/          versioned D1 schema
-tests/               Vitest unit tests (admin Access JWT guard)
+tests/               Vitest unit tests (Access JWT guard, gigs, content rules, download URL, musician overview)
 docs/                DATABASE.md, UPLOADING.md, ADMIN.md, PWA.md
 ```
 
 ## Routes
 
-| Route     | Description                                                         |
-| --------- | ------------------------------------------------------------------- |
-| `/`       | Landing page: hero, welcome card, song list, sticky player          |
-| `/texter` | Lyrics & chords for songs that have lyrics; `?song=<id>` deep links |
-| `/admin`  | Admin/editor UI, protected by Cloudflare Access                     |
+| Route               | Description                                                             |
+| ------------------- | ----------------------------------------------------------------------- |
+| `/`                 | Hero + Kommande spelningar (no section until a date exists) + tracklist |
+| `/texter`           | Lyrics & chords for songs that have lyrics; `?song=<id>` deep links     |
+| `/about`            | "Om oss": editable heading + text, streaming links and contact          |
+| `/admin`            | Admin/editor UI, protected by Cloudflare Access                         |
+| `/admin/spelningar` | Gig calendar editor, protected by Cloudflare Access                     |
+| `/admin/about`      | Editor for the welcome text and the Om oss page, Cloudflare Access      |
 
 ## PWA / installability
 

@@ -1,11 +1,31 @@
 "use client";
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export interface AdminToast {
   id: number;
   text: string;
   tone: "success" | "error";
+}
+
+/**
+ * Toast stack state shared by the admin pages: keeps at most the three most
+ * recent notices and hands out stable `notify`/`dismiss` callbacks.
+ */
+export function useAdminToasts() {
+  const [toasts, setToasts] = useState<AdminToast[]>([]);
+  const nextId = useRef(0);
+
+  const notify = useCallback((text: string, tone: "success" | "error") => {
+    const id = nextId.current++;
+    setToasts((current) => [...current, { id, text, tone }].slice(-3));
+  }, []);
+
+  const dismiss = useCallback((id: number) => {
+    setToasts((current) => current.filter((toast) => toast.id !== id));
+  }, []);
+
+  return { toasts, notify, dismiss };
 }
 
 interface ItemProps {

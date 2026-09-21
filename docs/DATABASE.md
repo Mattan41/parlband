@@ -16,8 +16,19 @@ D1 (parlband-db)
                            └─ functions/api/plays.ts  POST /api/plays
                                 (StickyPlayer increments recordings.play_count
                                  after 5 s of continuous playback)
+                 └─ components/SongRow.tsx  download link
+                      └─ functions/api/downloads.ts  GET /api/downloads
+                           (increments recordings.download_count, then redirects
+                            to the WAV in R2)
+  └─ functions/api/content.ts GET /api/content (site_content → editable page copy)
+       ├─ components/home/Hero.tsx     welcome line on the landing page
+       └─ components/about/AboutView.tsx  heading + body on /about
+  └─ functions/api/gigs.ts    GET /api/gigs    (upcoming gigs)
+       └─ components/home/GigList.tsx  "Kommande spelningar"; renders nothing when empty
   └─ functions/api/admin/*    /api/admin/*   (CRUD + R2 uploads: mp3/wav/cover/pdf)
-       └─ app/admin/page.tsx  admin UI (protected by Cloudflare Access)
+       ├─ app/admin/page.tsx         catalogue UI (protected by Cloudflare Access)
+       ├─ app/admin/spelningar/page.tsx  gig calendar (/api/admin/gigs)
+       └─ app/admin/about/page.tsx   page-copy editor (PUT /api/admin/content)
 ```
 
 The D1 binding is defined in `wrangler.toml` and is named `DB`. The R2 bucket
@@ -59,6 +70,8 @@ settings.
     admin API refuses to save a recording whose mp3 is missing (see below).
   - `play_count`: Number of plays. Derived counter – never set through the admin
     API.
+  - `download_count`: Number of WAV downloads. Derived counter – never set
+    through the admin API (and not returned for hidden recordings).
   - `is_primary`: `1` for the recording the public API serves when a song has
     several **public** recordings (e.g. studio + live). It only breaks ties among
     the public ones; the admin API keeps exactly one primary per song.
@@ -71,6 +84,24 @@ settings.
 
 - **recording_credits** – Join table for who played which instrument on a given recording (`recording_id`, `musician_id`, `instrument`).
 
+- **site_content** – Editable site copy as `key`/`value`:
+  `welcome_text` (the welcome line under the band members on the landing page),
+  `about_heading` and `about_body` (the heading and free text on `/about`). All
+  three are edited at `/admin/about`; the key/value shape keeps the schema stable
+  when more editable copy is added.
+
+- **gigs** – The gig calendar ("Kommande spelningar"), edited at
+  `/admin/spelningar`.
+  - `event_date`: ISO date (`YYYY-MM-DD`, text). `GET /api/gigs` only returns
+    today and later, so past gigs disappear from the site on their own while
+    staying in the admin; the admin also relies on the ISO form for the
+    "Passerat" badge.
+  - `start_time`: optional 24-hour time (`HH:MM`).
+  - `venue`: required, e.g. a stage or a festival name.
+  - `city`, `ticket_url`, `info`: optional (the URL must be `http(s)`).
+  - Nothing is seeded on purpose: an empty table means the landing page renders
+    no "Kommande spelningar" section at all.
+
 - **d1_migrations** – Created and managed by Wrangler. Do not edit manually.
 
 ## The API response
@@ -79,7 +110,7 @@ settings.
 
 `id`, `recording_id`, `title`, `artist`, `lyrics_by`, `music_by`, `lyrics`,
 `sheet_music_path`, `album`, `studio`, `year`, `engineer`, `mp3_path`,
-`wav_path`, `cover_path`, `play_count` and
+`wav_path`, `cover_path`, `play_count`, `download_count` and
 `credits: Array<{ musician, instrument }>`.
 
 - Each song is linked to its **primary public** recording
@@ -93,9 +124,9 @@ settings.
   not a union of every recording of the song.
 - `recording_id` is the `recordings.id` of the exact recording that
   `mp3_path`/`wav_path` come from (the same subquery row). This is the id sent to
-  `POST /api/plays`. If a song ever displays multiple recordings at the same
-  time, a single `recording_id` per `Song` is no longer sufficient – see the
-  comment in `toSong()`.
+  `POST /api/plays` and to `GET /api/downloads`. If a song ever displays multiple
+  recordings at the same time, a single `recording_id` per `Song` is no longer
+  sufficient – see the comment in `toSong()`.
 
 ## Admin API (functions/api/admin/\*)
 
@@ -111,6 +142,8 @@ dev:d1` the admin routes are open – that is expected.
 | `/api/admin/credits`    | `POST`, `DELETE`               | Add or remove a `(recording_id, musician_id, instrument)` row.                                                                                             |
 | `/api/admin/musicians`  | `GET`, `POST`, `PUT`           | List musicians for the dropdown; create one by name (idempotent) and rename one with `PUT`.                                                                |
 | `/api/admin/upload`     | `POST`                         | Proxy an mp3/wav/cover/pdf upload into R2 (see [UPLOADING.md](./UPLOADING.md)).                                                                            |
+| `/api/admin/content`    | `PUT`                          | Save the editable page copy into `site_content` (`welcome_text`, `about_heading`, `about_body`; read side is the public `GET /api/content`).               |
+| `/api/admin/gigs`       | `GET`, `POST`, `PUT`, `DELETE` | Gig calendar: list **every** date incl. past ones, create, update and delete one (validation in `gig-rules.ts`).                                           |
 
 - **mp3 existence:** `POST`/`PUT /api/admin/recordings` require `mp3_path` to be a
   bare `.mp3` file name (`^[A-Za-z0-9._-]+\.mp3$`, no `..`) whose object exists in
@@ -142,6 +175,7 @@ dev:d1` the admin routes are open – that is expected.
           "year": 2023,
           "mp3_path": "fri.mp3",
           "play_count": 0,
+          "download_count": 0,
           "is_primary": 1,
           "credits": [
             {
@@ -164,7 +198,8 @@ Conventions:
 - `DELETE` takes its key(s) as query parameters, e.g.
   `/api/admin/recordings?id=1` and
   `/api/admin/credits?recording_id=1&musician_id=2&instrument=Sång`.
-- `play_count` is read-only: it is returned but ignored by `POST`/`PUT`.
+- `play_count` and `download_count` are read-only: they are returned but ignored
+  by `POST`/`PUT`.
 - Setting `is_primary: true` clears the flag on the song's other recordings in
   the same `batch()`, so a song never has two primaries.
 - Deleting a recording also deletes its credits but leaves the R2 files in the
@@ -187,6 +222,64 @@ Conventions:
   (a replay after the track has finished counts as a new listening, including
   when the same song plays again from the queue).
 
+## Downloads: GET /api/downloads
+
+`functions/api/downloads.ts` counts a WAV download and then redirects to the
+file in R2. The public download button in `components/SongRow.tsx` points here
+(`downloadSrc`) instead of straight at the CDN, because the WAV lives on
+`cdn.kruskopf.org`: a cross-origin `download` attribute is ignored, so the click
+could never be observed in the browser.
+
+- **Query:** `?id=<recording_id>` (positive integer).
+- **Response:** `302` to
+  `${NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/wav/<wav_path>` (after
+  `download_count` was incremented).
+- **Errors:** `400` if `id` is missing/invalid, `404` when the recording does not
+  exist, is hidden (`is_public = 0`) or has no `wav_path`, `500` on unexpected
+  errors.
+- **Call site:** the download link itself, so a redirect – rather than a JS
+  `fetch` followed by a navigation – keeps ordinary clicks, middle-clicks and
+  keyboard activation working. The R2 object's
+  `content-disposition: attachment` is what actually starts the download.
+- `//api/` is never cached by the service worker, so a click always reaches the
+  Worker.
+
+## Site copy: GET /api/content and PUT /api/admin/content
+
+- `GET /api/content` (public, `functions/api/content.ts`) returns
+  `{ "welcomeText": string, "aboutHeading": string, "aboutBody": string }` from
+  `site_content`. Missing rows resolve to `""`, so the landing page simply omits
+  the welcome line and `/about` falls back to its built-in "Om oss" heading.
+- `PUT /api/admin/content` (protected, `functions/api/admin/content.ts`) upserts
+  all three keys in one `DB.batch`:
+  `{ welcomeText, aboutHeading, aboutBody }` →
+  `{ "success": true, ...fields }`. A missing or non-string field (`400`) and a
+  field over 20000 characters (`400`) are refused; everything else, including the
+  empty string, is stored as given (values are not trimmed, so the editor's line
+  breaks survive). The rules live in `content-rules.ts`.
+- The admin editor reads through the public endpoint, so there is no duplicate
+  GET handler under `/api/admin/`.
+
+## Gigs: GET /api/gigs and GET/POST/PUT/DELETE /api/admin/gigs
+
+- `GET /api/gigs` (public, `functions/api/gigs.ts`) returns `{ "gigs": [...] }`
+  for **today and later**, ordered by date and start time:
+  `id`, `event_date`, `start_time`, `venue`, `city`, `ticket_url`, `info`.
+  Past rows stay in the table so the admin can still fix them.
+- The filter is `event_date >= date('now')`. `date('now')` is UTC, which can keep
+  a gig visible for a couple of hours past local midnight – deliberate: showing
+  it slightly too long beats hiding it too early.
+- `GET /api/admin/gigs` returns **every** gig (`event_date DESC`), so the admin
+  can see and edit past dates; the UI badges them "Passerat".
+- `POST` creates (`201`, `{ success, gig }`), `PUT` updates by `id` in the body
+  (`404` when it does not exist) and `DELETE ?id=<n>` removes one (`404` when it
+  does not exist). Invalid payloads are `400`; see `gig-rules.ts` for the rules
+  (valid `YYYY-MM-DD`, optional `HH:MM`, required `venue`, optional `http(s)`
+  `ticket_url`).
+- The landing page reads the public endpoint in
+  `components/home/GigList.tsx` and renders **nothing** while the list is empty
+  or the request fails, so a gig-less site has no empty calendar block.
+
 ## URLs and R2
 
 The client builds full URLs from the file names. The base comes from
@@ -195,12 +288,12 @@ The client builds full URLs from the file names. The base comes from
 | Column in D1       | Built in `toSong()` to                                                                                                  |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------- |
 | `mp3_path`         | `${NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/mp3/<mp3_path>` → `src`                                                         |
-| `wav_path`         | `${NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/wav/<wav_path>` → `downloadSrc`                                                 |
+| `wav_path`         | `/api/downloads?id=<recording_id>` → `downloadSrc` (the CDN URL is built in the Worker after counting; see above)       |
 | `cover_path`       | `${NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/images/<cover_path>` → `cover`                                                  |
 | `sheet_music_path` | No URL is built in the client yet; the file is stored at `parlband/pdf/<sheet_music_path>` and uploaded by the admin UI |
 
-If `wav_path` is missing the download button is omitted, and songs without
-`mp3_path` are filtered out in the frontend.
+If `wav_path` is missing (or `recording_id` is null) the download button is
+omitted, and songs without `mp3_path` are filtered out in the frontend.
 
 These CDN files are deliberately **excluded from the service worker cache** (see
 [PWA.md](./PWA.md)). The app shell works offline, but audio, WAV downloads and

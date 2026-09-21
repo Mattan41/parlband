@@ -1,15 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import GigList from "@/components/home/GigList";
 import Hero from "@/components/home/Hero";
 import SongList from "@/components/home/SongList";
-import SiteNav from "@/components/SiteNav";
+import PublicShell from "@/components/PublicShell";
+import { fetchSiteContent } from "@/data/content";
 import { toSong, type Song, type SongRow as SongRowData } from "@/data/songs";
 
 export default function Home() {
   const [songs, setSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [welcomeText, setWelcomeText] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -37,13 +40,47 @@ export default function Home() {
     };
   }, []);
 
+  /**
+   * The welcome line is edited at /admin/about. It is fetched separately from
+   * the songs so a failing songs request does not hide it (and vice versa); on
+   * failure the hero simply renders without the line.
+   */
+  useEffect(() => {
+    let cancelled = false;
+
+    fetchSiteContent()
+      .then((content) => {
+        if (!cancelled) setWelcomeText(content.welcomeText);
+      })
+      .catch((cause: unknown) => {
+        console.error("Failed to load site content", cause);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
-    <div className="flex flex-1 flex-col items-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex w-full max-w-2xl flex-col gap-6 px-4 pt-8 pb-32 sm:gap-10 sm:pt-16">
-        <SiteNav />
-        <Hero />
+    <PublicShell width="wide">
+      <Hero welcomeText={welcomeText} />
+
+      {/* Renders nothing until the band adds a date in /admin/spelningar. */}
+      <GigList />
+
+      {/* The hero's "Lyssna" hint jumps here, past "Kommande spelningar".
+          scroll-mt keeps the anchor clear of any future sticky bar. */}
+      <section
+        id="songlist"
+        aria-labelledby="listen-hint"
+        className="scroll-mt-8"
+      >
         <SongList songs={songs} loading={loading} error={error} />
-      </main>
-    </div>
+      </section>
+
+      {/* components/StreamingLinks.tsx ("Ni hittar oss även här" + contact) is
+          used on /about. Add <StreamingLinks /> here to show it on the landing
+          page as well. */}
+    </PublicShell>
   );
 }

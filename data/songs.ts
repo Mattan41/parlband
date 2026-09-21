@@ -11,10 +11,10 @@ export interface SongRow {
   id: string;
   /**
    * Id of the specific recording the `src`/`downloadSrc` URLs were built from.
-   * Sent to POST /api/plays so the counter lands on the recording that is
-   * actually played. Note: if a Song ever exposes multiple recordings (e.g.
-   * studio + live at the same time), a single `recording_id` per Song is no
-   * longer sufficient.
+   * Sent to POST /api/plays and used by GET /api/downloads so both counters
+   * land on the recording that is actually played/downloaded. Note: if a Song
+   * ever exposes multiple recordings (e.g. studio + live at the same time), a
+   * single `recording_id` per Song is no longer sufficient.
    */
   recording_id: number | null;
   title: string;
@@ -31,6 +31,8 @@ export interface SongRow {
   wav_path: string | null;
   cover_path: string | null;
   play_count: number | null;
+  /** Number of WAV downloads, counted by GET /api/downloads. */
+  download_count: number | null;
   credits: SongCredit[];
 }
 
@@ -46,7 +48,12 @@ export interface Song extends SongRow {
   music: string;
   /** Streaming MP3 URL. */
   src: string;
-  /** High-quality WAV download URL, only present when `wav_path` exists. */
+  /**
+   * App-internal download endpoint for the high-quality WAV, only present when
+   * `wav_path` exists. It redirects to the file in R2 after counting the
+   * download (functions/api/downloads.ts), so the CDN URL is never built in the
+   * client.
+   */
   downloadSrc?: string;
   /** Cover image URL, or "" when `cover_path` is missing. */
   cover: string;
@@ -61,9 +68,10 @@ export function toSong(row: SongRow): Song {
     text: row.lyrics_by,
     music: row.music_by,
     src: row.mp3_path ? `${AUDIO_BASE_URL}/parlband/mp3/${row.mp3_path}` : "",
-    downloadSrc: row.wav_path
-      ? `${AUDIO_BASE_URL}/parlband/wav/${row.wav_path}`
-      : undefined,
+    downloadSrc:
+      row.wav_path && row.recording_id != null
+        ? `/api/downloads?id=${row.recording_id}`
+        : undefined,
     cover: row.cover_path
       ? `${AUDIO_BASE_URL}/parlband/images/${row.cover_path}`
       : "",

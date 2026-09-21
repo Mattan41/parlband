@@ -3,6 +3,13 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  /*
+   * Height of the shared public top navigation (components/SiteNav.tsx):
+   * text-xs line box (1rem) + py-1.5 (1.5rem) + 1px borders. Used by
+   * components/home/Hero.tsx to size the first mobile viewport correctly, so
+   * update this whenever SiteNav's padding or type scale changes.
+   */
+  --site-nav-height: 2.5rem;
 }
 
 @theme inline {
