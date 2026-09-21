@@ -241,3 +241,46 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     return Response.json({ error: "Failed to update song" }, { status: 500 });
   }
 };
+
+export const onRequestDelete: PagesFunction<Env> = async (context) => {
+  const id = (new URL(context.request.url).searchParams.get("id") ?? "").trim();
+  if (!id || !SLUG_PATTERN.test(id)) {
+    return badRequest(
+      "id query parameter must be a slug (lowercase a-z, 0-9 and hyphens)"
+    );
+  }
+
+  try {
+    const song = await context.env.DB.prepare(
+      `SELECT id FROM songs WHERE id = ?`
+    )
+      .bind(id)
+      .first<{ id: string }>();
+    if (!song) {
+      return Response.json({ error: "Song not found" }, { status: 404 });
+    }
+
+    // No cascade: a song with recordings must be emptied by hand first, so a
+    // delete can never silently take recordings (and their credits) with it.
+    const recording = await context.env.DB.prepare(
+      `SELECT id FROM recordings WHERE song_id = ? LIMIT 1`
+    )
+      .bind(id)
+      .first<{ id: number }>();
+    if (recording) {
+      return Response.json(
+        { error: "Song has recordings", code: "song_has_recordings" },
+        { status: 409 }
+      );
+    }
+
+    await context.env.DB.prepare(`DELETE FROM songs WHERE id = ?`)
+      .bind(id)
+      .run();
+
+    return Response.json({ success: true });
+  } catch (error) {
+    console.error("Failed to delete song", error);
+    return Response.json({ error: "Failed to delete song" }, { status: 500 });
+  }
+};

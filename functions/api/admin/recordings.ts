@@ -1,3 +1,5 @@
+import { isValidMp3FileName, mp3ExistsInCdn } from "./recording-rules";
+
 /** Columns returned for a single recording. */
 const RECORDING_FIELDS = `id, song_id, album, studio, year, engineer, notes,
   mp3_path, wav_path, cover_path, play_count, is_primary, is_public`;
@@ -69,8 +71,8 @@ function optionalBoolean(
   return value;
 }
 
-function badRequest(error: string): Response {
-  return Response.json({ error }, { status: 400 });
+function badRequest(error: string, code?: string): Response {
+  return Response.json(code ? { error, code } : { error }, { status: 400 });
 }
 
 /** Read a recording row by id (null when it does not exist). */
@@ -82,6 +84,24 @@ async function findRecording(
     .prepare(`SELECT ${RECORDING_FIELDS} FROM recordings WHERE id = ?`)
     .bind(id)
     .first<RecordingRow>();
+}
+
+/**
+ * Validate mp3_path and confirm the object exists in R2. Only called when the
+ * path is new or changed, so legacy rows with unusual paths can still be
+ * updated without touching their file. Returns a ready error response, or null.
+ */
+async function checkMp3Path(
+  cdn: Env["CDN"],
+  path: string
+): Promise<Response | null> {
+  if (!isValidMp3FileName(path)) {
+    return badRequest("Invalid mp3_path", "mp3_invalid");
+  }
+  if (!(await mp3ExistsInCdn(cdn, path))) {
+    return badRequest("MP3 file not found in R2", "mp3_missing");
+  }
+  return null;
 }
 
 interface RecordingFields {
@@ -169,6 +189,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       return Response.json({ error: "Song not found" }, { status: 404 });
     }
 
+    const mp3Problem = await checkMp3Path(context.env.CDN, fields.mp3Path);
+    if (mp3Problem) return mp3Problem;
+
     const countRow = await context.env.DB.prepare(
       `SELECT COUNT(*) AS count FROM recordings WHERE song_id = ?`
     )
@@ -233,12 +256,19 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 
   try {
     const existing = await context.env.DB.prepare(
-      `SELECT id, song_id FROM recordings WHERE id = ?`
+      `SELECT id, song_id, mp3_path FROM recordings WHERE id = ?`
     )
       .bind(id)
-      .first<{ id: number; song_id: string }>();
+      .first<{ id: number; song_id: string; mp3_path: string }>();
     if (!existing) {
       return Response.json({ error: "Recording not found" }, { status: 404 });
+    }
+
+    // Re-check the R2 object only when the path actually changes, so editing
+    // metadata on an old recording never breaks on a missing legacy file.
+    if (fields.mp3Path !== existing.mp3_path) {
+      const mp3Problem = await checkMp3Path(context.env.CDN, fields.mp3Path);
+      if (mp3Problem) return mp3Problem;
     }
 
     const updateStatement = context.env.DB.prepare(

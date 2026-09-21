@@ -169,6 +169,25 @@ export default function AdminPage() {
     [reload]
   );
 
+  /** After deleting a song, close whatever belonged to it and refresh. */
+  const handleSongDeleted = useCallback(
+    async (songId: string) => {
+      const deleted = songs.find((song) => song.id === songId);
+      const openRecordingBelonged =
+        deleted !== undefined &&
+        openRecordingId !== null &&
+        deleted.recordings.some(
+          (recording) => recording.id === openRecordingId
+        );
+
+      setExpandedId((current) => (current === songId ? null : current));
+      setRecordingSongId((current) => (current === songId ? null : current));
+      if (openRecordingBelonged) setOpenRecordingId(null);
+      await reload();
+    },
+    [songs, openRecordingId, reload]
+  );
+
   /** After creating a recording, expand its card. */
   const handleRecordingCreated = useCallback((recordingId: number) => {
     setOpenRecordingId(recordingId);
@@ -242,6 +261,7 @@ export default function AdminPage() {
                 expanded={expandedId === song.id}
                 onToggle={() => toggle(song.id)}
                 onAddRecording={() => setRecordingSongId(song.id)}
+                onDeleted={() => void handleSongDeleted(song.id)}
                 openRecordingId={openRecordingId}
                 onOpenRecording={setOpenRecordingId}
                 onMusiciansChanged={refreshMusicians}
@@ -257,6 +277,7 @@ export default function AdminPage() {
             songs={songs}
             musicians={musicians}
             onMusiciansChanged={refreshMusicians}
+            onChanged={reload}
           />
         ) : null}
 

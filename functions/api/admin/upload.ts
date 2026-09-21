@@ -60,6 +60,15 @@ const KIND_CONFIG: Record<UploadKind, UploadKindConfig> = {
   },
 };
 
+/** `bytes` random bytes as lowercase hex (used to make upload keys unique). */
+function randomHex(bytes: number): string {
+  const values = new Uint8Array(bytes);
+  crypto.getRandomValues(values);
+  return [...values]
+    .map((value) => value.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 const IMAGE_EXTENSIONS: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
@@ -125,7 +134,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     kind === "cover"
       ? (IMAGE_EXTENSIONS[contentType] ?? "jpg")
       : (config.extension as string);
-  const fileName = `${songId}.${extension}`;
+  // MP3/WAV/cover get a unique name per upload so a second recording of the
+  // same song never overwrites the first. The PDF is one document per song and
+  // keeps its stable key (re-upload replaces it).
+  const fileName =
+    kind === "pdf" ? `${songId}.pdf` : `${songId}-${randomHex(4)}.${extension}`;
   const key = `${config.prefix}/${fileName}`;
 
   try {
@@ -144,23 +157,38 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     if (recordingId !== null) {
       const recording = await context.env.DB.prepare(
-        `SELECT id FROM recordings WHERE id = ?`
+        `SELECT id, song_id FROM recordings WHERE id = ?`
       )
         .bind(recordingId)
-        .first<{ id: number }>();
+        .first<{ id: number; song_id: string }>();
       if (!recording) {
         return Response.json({ error: "Recording not found" }, { status: 404 });
+      }
+      // A recording belongs to exactly one song; refuse to attach its file to
+      // a different song id.
+      if (recording.song_id !== songId) {
+        return Response.json(
+          { error: "recording does not belong to song" },
+          { status: 400 }
+        );
       }
     }
 
     const httpMetadata: R2HTTPMetadata = {
       contentType,
-      cacheControl: "public, max-age=31536000, immutable",
+      // A PDF keeps its stable <song-id>.pdf key and is replaced on re-upload,
+      // so it must not be cached as immutable. The audio/cover names are unique
+      // per upload and can be cached forever.
+      cacheControl:
+        kind === "pdf"
+          ? "public, max-age=0, must-revalidate"
+          : "public, max-age=31536000, immutable",
     };
     // WAV is a download; without this the browser plays it instead (the HTML
     // `download` attribute only works same-origin).
     if (kind === "wav") {
-      httpMetadata.contentDisposition = `attachment; filename="${fileName}"`;
+      // The stored key is unique, but the download should keep the plain name.
+      httpMetadata.contentDisposition = `attachment; filename="${songId}.wav"`;
     }
 
     const object = await context.env.CDN.put(key, body, { httpMetadata });
