@@ -55,6 +55,8 @@ settings.
   - `id`: Autoincrement, `song_id` → `songs.id`.
   - `album`, `studio`, `year`, `engineer`, `notes`: Technical metadata.
   - `mp3_path`, `wav_path`, `cover_path`: File names in R2 (see [UPLOADING.md](./UPLOADING.md)).
+    `mp3_path` must point at an object that actually exists in the bucket – the
+    admin API refuses to save a recording whose mp3 is missing (see below).
   - `play_count`: Number of plays. Derived counter – never set through the admin
     API.
   - `is_primary`: `1` for the recording the public API serves when a song has
@@ -102,13 +104,28 @@ The admin surface at `/admin` is protected by **Cloudflare Access** at the edge
 `/api/admin*`). Cloudflare Access does not run locally, so during `npm run
 dev:d1` the admin routes are open – that is expected.
 
-| Endpoint                | Methods                 | Purpose                                                                                            |
-| ----------------------- | ----------------------- | -------------------------------------------------------------------------------------------------- |
-| `/api/admin/songs`      | `GET`, `POST`, `PUT`    | List every song with **all** its recordings and each recording's credits; create and update songs. |
-| `/api/admin/recordings` | `POST`, `PUT`, `DELETE` | Create a recording under a song, update one (including `is_primary`/`is_public`), or delete it.    |
-| `/api/admin/credits`    | `POST`, `DELETE`        | Add or remove a `(recording_id, musician_id, instrument)` row.                                     |
-| `/api/admin/musicians`  | `GET`, `POST`           | List musicians for the dropdown; create one by name (case-insensitive and idempotent).             |
-| `/api/admin/upload`     | `POST`                  | Proxy an mp3/wav/cover/pdf upload into R2 (see [UPLOADING.md](./UPLOADING.md)).                    |
+| Endpoint                | Methods                        | Purpose                                                                                                                                                    |
+| ----------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/api/admin/songs`      | `GET`, `POST`, `PUT`, `DELETE` | List every song with **all** its recordings and each recording's credits; create and update songs. `DELETE` removes a song only when it has no recordings. |
+| `/api/admin/recordings` | `POST`, `PUT`, `DELETE`        | Create a recording under a song, update one (including `is_primary`/`is_public`), or delete it.                                                            |
+| `/api/admin/credits`    | `POST`, `DELETE`               | Add or remove a `(recording_id, musician_id, instrument)` row.                                                                                             |
+| `/api/admin/musicians`  | `GET`, `POST`, `PUT`           | List musicians for the dropdown; create one by name (idempotent) and rename one with `PUT`.                                                                |
+| `/api/admin/upload`     | `POST`                         | Proxy an mp3/wav/cover/pdf upload into R2 (see [UPLOADING.md](./UPLOADING.md)).                                                                            |
+
+- **mp3 existence:** `POST`/`PUT /api/admin/recordings` require `mp3_path` to be a
+  bare `.mp3` file name (`^[A-Za-z0-9._-]+\.mp3$`, no `..`) whose object exists in
+  R2. On `POST` the check always runs; on `PUT` only when `mp3_path` changed, so
+  editing an old recording with an unusual legacy path still saves. Failures are
+  `400 { code: "mp3_invalid" }` / `400 { code: "mp3_missing" }`.
+- **Song delete does not cascade:** `DELETE /api/admin/songs?id=<slug>` returns
+  `409 { code: "song_has_recordings" }` while any recording references the song,
+  `404` when the song is unknown, and otherwise deletes only the `songs` row. R2
+  files are never removed by the API.
+- **Musician names:** stored NFC-normalized and compared in JS with
+  `toLocaleLowerCase("sv")`, because SQLite's `COLLATE NOCASE` is ASCII-only and
+  would treat "Örjan" and "örjan" as different. `POST` is idempotent;
+  `PUT /api/admin/musicians` allows a case-only rename of the same musician and
+  returns `409 { code: "name_conflict" }` for a name used by another one.
 
 `GET /api/admin/songs` returns one object per song with every recording nested
 (not only the primary one needed by the public API):

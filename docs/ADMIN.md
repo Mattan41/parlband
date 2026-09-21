@@ -60,6 +60,10 @@ destination can never leave the write endpoints open:
   and adding the first recording is the visible next step.
 - A song only becomes **public** once it has a recording with an `mp3_path` that
   is also marked **Publik** – `GET /api/songs` filters out songs without one.
+- **Delete a song** with **Ta bort låt** in its Låtinfo panel. A song that still
+  has recordings is refused (`409`, "Låten har inspelningar – ta bort dem
+  först.") – delete its recordings first. Only the `songs` row is removed; R2
+  files are left in the bucket.
 
 ## Recordings
 
@@ -77,6 +81,12 @@ A song can have several recordings (e.g. studio + live).
   compact credits summary (e.g. `Mats: Elbas · Nova: Sång`) so the takes stay
   easy to tell apart.
 - Fields: album, studio, year, engineer, notes, mp3 path, wav path, cover path.
+- **MP3 required:** a recording cannot be saved unless its `mp3_path` points at
+  an **object that exists in R2** (the server checks with `CDN.head`). A new
+  recording starts with an **empty** mp3 path – upload the file (or, for legacy
+  material, point at an existing object). A missing file shows a Swedish inline
+  error ("MP3-filen finns inte i R2 …"), while editing other fields on an old
+  recording with an unchanged `mp3_path` still saves.
 - **Publik** (`is_public`): whether the recording may be shown on the site.
   Uncheck it to hide a take (e.g. while re-recording) without deleting it. A
   song whose only recording is hidden stops being playable publicly.
@@ -108,22 +118,23 @@ A song can have several recordings (e.g. studio + live).
 Upload buttons fill in the matching path field and save it immediately, so no
 separate save is needed for the file.
 
-| Button                | Kind    | R2 prefix          | Stored as                               | Limit |
-| --------------------- | ------- | ------------------ | --------------------------------------- | ----- |
-| Ladda upp MP3         | `mp3`   | `parlband/mp3/`    | `<song-id>.mp3`                         | 25 MB |
-| Ladda upp WAV         | `wav`   | `parlband/wav/`    | `<song-id>.wav`                         | 50 MB |
-| Ladda upp omslag      | `cover` | `parlband/images/` | `<song-id>.<jpg\|png\|webp\|avif\|gif>` | 10 MB |
-| Ladda upp noter (PDF) | `pdf`   | `parlband/pdf/`    | `<song-id>.pdf`                         | 20 MB |
+| Button                | Kind    | R2 prefix          | Stored as                                       | Limit |
+| --------------------- | ------- | ------------------ | ----------------------------------------------- | ----- |
+| Ladda upp MP3         | `mp3`   | `parlband/mp3/`    | `<song-id>-<8 hex>.mp3`                         | 25 MB |
+| Ladda upp WAV         | `wav`   | `parlband/wav/`    | `<song-id>-<8 hex>.wav`                         | 50 MB |
+| Ladda upp omslag      | `cover` | `parlband/images/` | `<song-id>-<8 hex>.<jpg\|png\|webp\|avif\|gif>` | 10 MB |
+| Ladda upp noter (PDF) | `pdf`   | `parlband/pdf/`    | `<song-id>.pdf`                                 | 20 MB |
 
 - In the **new recording** modal an upload fills in the path field but cannot
   link the file yet – press "Skapa inspelning" to store the recording.
 - MP3, WAV and cover are uploaded from a **recording** card; the PDF from the
   song's **Låtinfo** section.
-- Uploading a file with the same name **replaces** the previous object. Because
-  objects are cached as immutable, a replaced file may not show up in an open
-  player until the page is reloaded. The PWA service worker does not cache these
-  CDN files, so it never serves a stale copy – only the browser's own HTTP cache
-  is involved.
+- MP3/WAV/cover uploads get a **unique name per upload**, so a second
+  recording of the same song never overwrites the first recording's file. Old
+  objects are left behind when you re-upload (orphans in the bucket).
+- The **PDF** keeps its stable `<song-id>.pdf` key and is replaced on re-upload,
+  which is why it is served with `cache-control: no-cache` instead of the
+  `immutable` used for audio/cover.
 - **WAV** is served with `content-disposition: attachment` (a download); **MP3**
   streams and **PDF** opens inline in the browser's viewer.
 - The PDF is named `<song-id>.pdf` and the song row is updated automatically, so a
@@ -164,6 +175,11 @@ separate save is needed for the file.
   with inline feedback and refreshes the list without a page reload. The endpoint
   is idempotent (case-insensitive), so an already-registered name is reused
   rather than duplicated.
+- **Byt namn** renames a musician (`PUT /api/admin/musicians`) with the note
+  "Namnet ändras på alla inspelningar.". A name already used by **another**
+  musician is refused with a Swedish message (Swedish-aware comparison, so
+  "Örjan" and "örjan" collide); changing only the case of the same
+  musician's own name is allowed.
 
 ## Implementation note
 

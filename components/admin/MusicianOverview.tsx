@@ -1,9 +1,19 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { adminJson, type AdminMusician, type AdminSong } from "@/data/admin";
+import {
+  AdminApiError,
+  adminJson,
+  type AdminMusician,
+  type AdminSong,
+} from "@/data/admin";
 import { buildMusicianOverview } from "./musicianOverview";
-import { inputClass, primaryButtonClass } from "./adminStyles";
+import {
+  inputClass,
+  labelClass,
+  primaryButtonClass,
+  secondaryButtonClass,
+} from "./adminStyles";
 
 interface Feedback {
   text: string;
@@ -15,11 +25,20 @@ interface Props {
   musicians: AdminMusician[];
   /** Refresh just the musician list after adding one (no remount). */
   onMusiciansChanged: () => Promise<void>;
+  /** Refetch songs + musicians after a rename (credit names come from songs). */
+  onChanged: () => Promise<void>;
 }
 
 function recordingLabel(year: number | null, album: string | null): string {
   const parts = [year, album].filter(Boolean);
   return parts.length > 0 ? parts.join(" · ") : "utan år/album";
+}
+
+function describeRenameError(cause: unknown): string {
+  if (cause instanceof AdminApiError && cause.code === "name_conflict") {
+    return "Namnet används redan av en annan musiker.";
+  }
+  return cause instanceof Error ? cause.message : "Kunde inte byta namn.";
 }
 
 /**
@@ -31,11 +50,16 @@ export default function MusicianOverview({
   songs,
   musicians,
   onMusiciansChanged,
+  onChanged,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [adding, setAdding] = useState(false);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editName, setEditName] = useState("");
+  const [renaming, setRenaming] = useState(false);
+  const [renameFeedback, setRenameFeedback] = useState<Feedback | null>(null);
   const overview = useMemo(
     () => buildMusicianOverview(songs, musicians),
     [songs, musicians]
@@ -75,6 +99,38 @@ export default function MusicianOverview({
       });
     } finally {
       setAdding(false);
+    }
+  }
+
+  function cancelRename() {
+    setEditingId(null);
+    setEditName("");
+    setRenameFeedback(null);
+  }
+
+  async function handleRename(event: React.FormEvent) {
+    event.preventDefault();
+    if (editingId === null) return;
+    const name = editName.trim();
+    if (!name) {
+      setRenameFeedback({ text: "Ange ett namn.", tone: "error" });
+      return;
+    }
+
+    setRenaming(true);
+    setRenameFeedback(null);
+    try {
+      await adminJson("/api/admin/musicians", "PUT", { id: editingId, name });
+      setRenameFeedback({ text: "Namnet uppdaterades.", tone: "success" });
+      setEditingId(null);
+      setEditName("");
+      // Reload songs too: credit names rendered in the cards come from the
+      // songs response (join on musicians).
+      await onChanged();
+    } catch (cause) {
+      setRenameFeedback({ text: describeRenameError(cause), tone: "error" });
+    } finally {
+      setRenaming(false);
     }
   }
 
@@ -153,12 +209,74 @@ export default function MusicianOverview({
             </p>
           ) : null}
 
+          {renameFeedback ? (
+            <p
+              role={renameFeedback.tone === "error" ? "alert" : "status"}
+              className={`mb-3 rounded-md border px-2 py-1 text-xs ${
+                renameFeedback.tone === "error"
+                  ? "border-red-300 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
+                  : "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300"
+              }`}
+            >
+              {renameFeedback.text}
+            </p>
+          ) : null}
+
           <div className="space-y-4">
             {overview.entries.map((entry) => (
               <div key={entry.id}>
-                <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                  {entry.name}
-                </h3>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                    {entry.name}
+                  </h3>
+                  {editingId === entry.id ? null : (
+                    <button
+                      type="button"
+                      className="text-xs text-amber-700 underline underline-offset-4 dark:text-amber-400"
+                      onClick={() => {
+                        setEditingId(entry.id);
+                        setEditName(entry.name);
+                        setRenameFeedback(null);
+                      }}
+                    >
+                      Byt namn
+                    </button>
+                  )}
+                </div>
+
+                {editingId === entry.id ? (
+                  <form
+                    onSubmit={handleRename}
+                    className="mt-1 flex flex-wrap items-end gap-2"
+                  >
+                    <label className="min-w-40 flex-1">
+                      <span className={labelClass}>Nytt namn</span>
+                      <input
+                        className={inputClass}
+                        value={editName}
+                        onChange={(event) => setEditName(event.target.value)}
+                      />
+                    </label>
+                    <button
+                      type="submit"
+                      className={primaryButtonClass}
+                      disabled={renaming}
+                    >
+                      {renaming ? "Sparar…" : "Spara namn"}
+                    </button>
+                    <button
+                      type="button"
+                      className={secondaryButtonClass}
+                      onClick={cancelRename}
+                      disabled={renaming}
+                    >
+                      Avbryt
+                    </button>
+                    <p className="w-full text-xs text-zinc-500 dark:text-zinc-400">
+                      Namnet ändras på alla inspelningar.
+                    </p>
+                  </form>
+                ) : null}
                 {entry.credits.length === 0 ? (
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">
                     Inga medverkande registrerade ännu.

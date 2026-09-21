@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { adminJson, type AdminMusician, type AdminSong } from "@/data/admin";
+import {
+  AdminApiError,
+  adminJson,
+  type AdminMusician,
+  type AdminSong,
+} from "@/data/admin";
 import RecordingCard from "./RecordingCard";
 import SheetMusicUpload from "./SheetMusicUpload";
 import SongFields, {
@@ -9,7 +14,11 @@ import SongFields, {
   toSongPayload,
   type SongDraft,
 } from "./SongFields";
-import { primaryButtonClass, secondaryButtonClass } from "./adminStyles";
+import {
+  dangerButtonClass,
+  primaryButtonClass,
+  secondaryButtonClass,
+} from "./adminStyles";
 
 interface Props {
   song: AdminSong;
@@ -18,6 +27,8 @@ interface Props {
   onToggle: () => void;
   /** Opens the parent-owned "new recording" modal for this song. */
   onAddRecording: () => void;
+  /** Called after the song row was deleted (parent resets view + reloads). */
+  onDeleted: () => void;
   /** The single expanded recording card (any song), controlled by the page. */
   openRecordingId: number | null;
   onOpenRecording: (id: number | null) => void;
@@ -32,6 +43,7 @@ export default function SongSection({
   expanded,
   onToggle,
   onAddRecording,
+  onDeleted,
   openRecordingId,
   onOpenRecording,
   onMusiciansChanged,
@@ -62,6 +74,37 @@ export default function SongSection({
         error instanceof Error ? error.message : "Kunde inte spara låten",
         "error"
       );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    const confirmed = window.confirm(
+      `Ta bort låten "${song.title}"? R2-filerna lämnas kvar i bucketen.`
+    );
+    if (!confirmed) return;
+
+    setSaving(true);
+    try {
+      await adminJson(
+        `/api/admin/songs?id=${encodeURIComponent(song.id)}`,
+        "DELETE"
+      );
+      notify("Låten togs bort.", "success");
+      onDeleted();
+    } catch (cause) {
+      if (
+        cause instanceof AdminApiError &&
+        cause.code === "song_has_recordings"
+      ) {
+        notify("Låten har inspelningar – ta bort dem först.", "error");
+      } else {
+        notify(
+          cause instanceof Error ? cause.message : "Kunde inte ta bort låten",
+          "error"
+        );
+      }
     } finally {
       setSaving(false);
     }
@@ -112,8 +155,8 @@ export default function SongSection({
         hidden={!expanded}
         className="border-t border-zinc-200 px-4 py-4 dark:border-zinc-800"
       >
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-          <form onSubmit={handleSave}>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+          <form onSubmit={handleSave} className="min-w-0">
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               Låtinfo
               <span className="ml-1 normal-case tracking-normal text-amber-700 dark:text-amber-400">
@@ -134,7 +177,7 @@ export default function SongSection({
               notify={notify}
             />
 
-            <div className="mt-3">
+            <div className="mt-3 flex flex-wrap gap-2">
               <button
                 type="submit"
                 className={primaryButtonClass}
@@ -142,10 +185,18 @@ export default function SongSection({
               >
                 {saving ? "Sparar…" : "Spara låt"}
               </button>
+              <button
+                type="button"
+                className={dangerButtonClass}
+                onClick={() => void handleDelete()}
+                disabled={saving}
+              >
+                Ta bort låt
+              </button>
             </div>
           </form>
 
-          <div className="lg:border-l lg:border-zinc-200 lg:pl-6 dark:lg:border-zinc-800">
+          <div className="min-w-0 lg:border-l lg:border-zinc-200 lg:pl-6 dark:lg:border-zinc-800">
             <div className="mb-2 flex items-center justify-between gap-2">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                 Inspelningar

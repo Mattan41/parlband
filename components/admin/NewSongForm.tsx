@@ -115,7 +115,7 @@ export default function NewSongForm({ onCreated, notify }: Props) {
         onClose={closeModal}
       >
         <form onSubmit={handleSubmit}>
-          <div className="mb-3 grid gap-3 sm:grid-cols-2">
+          <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label>
               <span className={labelClass}>
                 Id (slug, används i filsökvägar)

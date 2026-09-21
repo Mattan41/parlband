@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
+  AdminApiError,
   adminJson,
   fileUrl,
   uploadAdminFile,
@@ -57,17 +58,15 @@ const UPLOAD_ACCEPT: Record<RecordingUploadKind, string> = {
 
 const UPLOAD_KINDS: RecordingUploadKind[] = ["mp3", "wav", "cover"];
 
-function toDraft(
-  recording: AdminRecording | null,
-  songId: string
-): RecordingDraft {
+function toDraft(recording: AdminRecording | null): RecordingDraft {
   return {
     album: recording?.album ?? "",
     studio: recording?.studio ?? "",
     year: recording?.year != null ? String(recording.year) : "",
     engineer: recording?.engineer ?? "",
     notes: recording?.notes ?? "",
-    mp3_path: recording?.mp3_path ?? `${songId}.mp3`,
+    // New recordings start empty; the path is filled in by uploading the file.
+    mp3_path: recording?.mp3_path ?? "",
     wav_path: recording?.wav_path ?? "",
     cover_path: recording?.cover_path ?? "",
     is_primary: recording ? recording.is_primary === 1 : false,
@@ -94,6 +93,19 @@ function draftEquals(a: RecordingDraft, b: RecordingDraft): boolean {
 interface Feedback {
   text: string;
   tone: "success" | "error";
+}
+
+/** Swedish message for a failed save, including the server error codes. */
+function describeSaveError(cause: unknown): string {
+  if (cause instanceof AdminApiError) {
+    if (cause.code === "mp3_missing")
+      return "MP3-filen finns inte i R2 – ladda upp filen först.";
+    if (cause.code === "mp3_invalid")
+      return "Ogiltig MP3-sökväg – ange ett filnamn som slutar på .mp3.";
+  }
+  return cause instanceof Error
+    ? cause.message
+    : "Kunde inte spara inspelningen";
 }
 
 /** "Mats: Elbas · Nova: Sång" – compact credits line for the collapsed header. */
@@ -145,9 +157,7 @@ export default function RecordingCard({
 }: Props) {
   // Seeded once. Reloads no longer remount the card (see app/admin/page.tsx),
   // so drafts stay put until they are saved or the page is left.
-  const [draft, setDraft] = useState<RecordingDraft>(() =>
-    toDraft(recording, song.id)
-  );
+  const [draft, setDraft] = useState<RecordingDraft>(() => toDraft(recording));
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<AdminUploadKind | null>(null);
   const [hasUploaded, setHasUploaded] = useState(false);
@@ -174,7 +184,7 @@ export default function RecordingCard({
   }
 
   const isDirty =
-    (isNew && hasUploaded) || !draftEquals(draft, toDraft(recording, song.id));
+    (isNew && hasUploaded) || !draftEquals(draft, toDraft(recording));
 
   useEffect(() => {
     onBusyChange?.(isBusy);
@@ -193,7 +203,7 @@ export default function RecordingCard({
     const trimmedMp3 = draft.mp3_path.trim();
     if (!trimmedMp3) {
       setFeedback({
-        text: "mp3_path krävs (fylls i automatiskt av uppladdning).",
+        text: "Ladda upp en MP3 (eller ange en sökväg) – mp3_path krävs.",
         tone: "error",
       });
       return null;
@@ -245,13 +255,7 @@ export default function RecordingCard({
         await onChanged();
       }
     } catch (cause) {
-      setFeedback({
-        text:
-          cause instanceof Error
-            ? cause.message
-            : "Kunde inte spara inspelningen",
-        tone: "error",
-      });
+      setFeedback({ text: describeSaveError(cause), tone: "error" });
     } finally {
       setSaving(false);
     }
@@ -373,7 +377,7 @@ export default function RecordingCard({
   );
 
   return (
-    <div className="overflow-hidden rounded-md border border-l-4 border-zinc-200 border-l-sky-500 bg-sky-50/40 transition focus-within:ring-1 focus-within:ring-sky-400 dark:border-zinc-800 dark:border-l-sky-500 dark:bg-sky-950/20 dark:focus-within:ring-sky-600">
+    <div className="min-w-0 overflow-hidden rounded-md border border-l-4 border-zinc-200 border-l-sky-500 bg-sky-50/40 transition focus-within:ring-1 focus-within:ring-sky-400 dark:border-zinc-800 dark:border-l-sky-500 dark:bg-sky-950/20 dark:focus-within:ring-sky-600">
       {onToggle ? (
         <button
           type="button"
@@ -411,7 +415,7 @@ export default function RecordingCard({
             </p>
           ) : null}
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label>
               <span className={labelClass}>Album</span>
               <input
@@ -458,6 +462,9 @@ export default function RecordingCard({
                   updateDraft({ mp3_path: event.target.value })
                 }
               />
+              <span className="mt-0.5 block text-[11px] text-zinc-500 dark:text-zinc-400">
+                Fylls i när du laddar upp. Filen måste finnas i R2.
+              </span>
             </label>
             <label>
               <span className={labelClass}>WAV-sökväg</span>

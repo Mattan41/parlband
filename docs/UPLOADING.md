@@ -33,15 +33,23 @@ Content-Type: <the file's content type>
 <raw file bytes>
 ```
 
-- The R2 key follows the existing convention:
-  `<song_id>.mp3` → `parlband/mp3/`, `<song_id>.wav` → `parlband/wav/`,
-  `<song_id>.<jpg|png|webp|avif|gif>` → `parlband/images/`,
-  `<song_id>.pdf` → `parlband/pdf/`.
-- WAV objects get `content-disposition: attachment`; MP3 and PDF get none – same
-  as the CLI commands below. PDFs therefore open inline in the browser viewer.
+- The R2 key for **mp3, wav and cover** now gets a **unique suffix per upload**:
+  `<song_id>-<8 hex>.mp3` → `parlband/mp3/`, `<song_id>-<8 hex>.wav` →
+  `parlband/wav/`, `<song_id>-<8 hex>.<jpg|png|webp|avif|gif>` →
+  `parlband/images/`. The 8 hex characters are generated server-side, so a
+  second recording of the same song never overwrites the first recording's file.
+  The old objects are left in the bucket when you re-upload.
+- The **PDF** keeps the stable `<song_id>.pdf` key → `parlband/pdf/` (one document
+  per song, replaced on re-upload).
+- WAV objects get `content-disposition: attachment; filename="<song_id>.wav"`
+  (the hashed key stays server-side); MP3 and PDF get none – PDFs therefore open
+  inline in the browser viewer, same as the CLI commands below.
+- `cache-control: immutable` is only set for mp3/wav/cover (unique keys). The PDF
+  is served without `immutable` because its key is overwritten on re-upload.
 - When `recording_id` is given, the matching recording column (`mp3_path` /
   `wav_path` / `cover_path`) is updated to the stored file name, so no separate
-  save is needed.
+  save is needed. The recording must belong to `song_id`, otherwise the endpoint
+  returns `400`.
 - A PDF belongs to the **song**, not the recording: it is stored as
   `<song_id>.pdf` and written to `songs.sheet_music_path` (no `recording_id`
   needed). The song must already exist, otherwise the endpoint returns `404`.
@@ -50,6 +58,9 @@ Content-Type: <the file's content type>
   need the CLI below (or a future multipart upload).
 - The returned URL uses `NEXT_PUBLIC_AUDIO_BASE_URL`, so the same file is
   immediately reachable at `https://cdn.kruskopf.org/parlband/...`.
+- The API only stores the file and updates the row; a recording whose `mp3_path`
+  points at a missing object is refused by `POST`/`PUT /api/admin/recordings`
+  (`400`, code `mp3_missing`).
 
 ### Cloudflare Access
 
