@@ -7,6 +7,8 @@
     "dev:d1": "concurrently -k -n \"next,wrangler\" -c \"cyan,magenta\" \"next dev --port 3000\" \"wrangler pages dev --port=8788 --proxy=3000\"",
     "build": "next build",
     "preview": "npm run build && wrangler pages dev out",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "db:migrate": "wrangler d1 migrations apply parlband-db --local",
     "db:reset": "rm -rf .wrangler/state/v3/d1 && npm run db:migrate && wrangler d1 execute parlband-db --local --file=seeds.sql",
     "start": "next start",
@@ -17,6 +19,7 @@
     "clean": "rm -rf .next dist out build"
   },
   "dependencies": {
+    "jose": "^6.2.12",
     "next": "16.3.5",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -34,6 +37,7 @@
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.9.7",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.7"
   }
 }

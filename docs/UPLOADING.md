@@ -60,6 +60,13 @@ the UI route would leave the write endpoints open to anyone who finds the URL.
 Access runs only at Cloudflare's edge, so local `wrangler pages dev` does not
 enforce it (expected, not a bug).
 
+Independently of the edge policy, every `/api/admin/*` request is also checked in
+`functions/api/admin/_middleware.ts`: the `Cf-Access-Jwt-Assertion` header is
+verified (signature, issuer, audience, expiry) against `CF_ACCESS_TEAM_DOMAIN` /
+`CF_ACCESS_AUD`, and anything else returns `401`. Locally that check is skipped
+with `NODE_ENV=development` in `.dev.vars` **and** a `localhost` URL – see
+[ADMIN.md](./ADMIN.md) and the README.
+
 ## Uploading a new song
 
 ```bash

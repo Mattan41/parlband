@@ -15,6 +15,27 @@ UI route would leave the write endpoints open to anyone who finds the URL.
 Access runs only at Cloudflare's edge, so local `wrangler pages dev` does not
 enforce it (expected, not a bug).
 
+## Access JWT validation (defense in depth)
+
+On top of the edge policy, `functions/api/admin/_middleware.ts` validates the
+Access JWT for **every** `/api/admin/*` request, so a misconfigured Access
+destination can never leave the write endpoints open:
+
+- The token is read from the `Cf-Access-Jwt-Assertion` header and checked for
+  signature, issuer, audience and expiry against
+  `https://<CF_ACCESS_TEAM_DOMAIN>/cdn-cgi/access/certs` (`jose`,
+  `RS256` pinned). `CF_ACCESS_TEAM_DOMAIN` and `CF_ACCESS_AUD` come from
+  `wrangler.toml` / the Pages project settings.
+- Any missing or invalid token returns `401 { "error": "Unauthorized" }` before
+  the route runs. The token itself is never logged.
+- The verified identity is available to the routes as
+  `context.data.access.email`
+  (`getAccessIdentity(context.data)?.email`), which is what a route should log to
+  record who made a change.
+- Locally the check is skipped only when `NODE_ENV=development` **and** the
+  request URL is `localhost` (see `.dev.vars.example`). Nothing in a request can
+  disable it.
+
 ## Songs
 
 - **Create** a song with title, artist, `Text av` (lyricist), `Musik av`

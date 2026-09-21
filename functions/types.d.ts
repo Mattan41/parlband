@@ -13,4 +13,18 @@ interface Env {
   CDN: R2Bucket;
   /** Public CDN base URL, e.g. https://cdn.kruskopf.org (from [vars]). */
   NEXT_PUBLIC_AUDIO_BASE_URL?: string;
+  /**
+   * Cloudflare Access team domain, e.g. https://knishopf.cloudflareaccess.com
+   * (from [vars]). The Access guard normalizes it and uses it as the expected
+   * `iss` claim and as the base of the JWKS URL.
+   */
+  CF_ACCESS_TEAM_DOMAIN?: string;
+  /** Cloudflare Access Application Audience (AUD) tag of the admin application. */
+  CF_ACCESS_AUD?: string;
+  /**
+   * `development` only for local `wrangler pages dev`; never set in a deployed
+   * environment. Together with a `localhost` request URL it is the single
+   * signal that lets the admin Access guard be skipped.
+   */
+  NODE_ENV?: string;
 }
