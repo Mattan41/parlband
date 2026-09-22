@@ -59,13 +59,16 @@ function TexterView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   /**
-   * Detail-view selection, seeded from ?song=<id> on mount so a shared or
-   * bookmarked URL opens straight to that song. A query param that does not
-   * match a loaded song resolves to no selection (and the list view).
+   * Detail-view selection is derived from `?song=<id>` on every render, so the
+   * URL is the single source of truth: a shared/bookmarked link, the browser's
+   * back button and a link from the sticky player's track sleeve all switch the
+   * view. A local `useState` copy would read the query string only on mount, so
+   * a second navigation to the same route would be a no-op.
+   *
+   * A query param that does not match a loaded song resolves to no selection
+   * (and the list view).
    */
-  const [selectedSongId, setSelectedSongId] = useState<string | null>(() =>
-    searchParams.get("song")
-  );
+  const selectedSongId = searchParams.get("song");
   /**
    * Lyrics-only by default; the toggle reveals the chord/instruction lines.
    * Purely a rendering preference and not persisted.
@@ -101,7 +104,6 @@ function TexterView() {
   const selectedSong = songs.find((song) => song.id === selectedSongId) ?? null;
 
   function selectSong(id: string) {
-    setSelectedSongId(id);
     // replace (not push) so flipping between songs does not spam browser history.
     router.replace(`${pathname}?song=${encodeURIComponent(id)}`, {
       scroll: false,
@@ -109,7 +111,6 @@ function TexterView() {
   }
 
   function clearSelection() {
-    setSelectedSongId(null);
     router.replace(pathname, { scroll: false });
   }
 

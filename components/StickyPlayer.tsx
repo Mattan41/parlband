@@ -5,6 +5,7 @@ import Image from "next/image";
 import { usePlayerStore } from "@/store/playerStore";
 import { formatSongCredits } from "./songCredits";
 import { iconButtonClass, iconButtonDisabledClass } from "./iconButton";
+import TrackSleeve from "./TrackSleeve";
 
 /**
  * Playback time (ms) that must elapse continuously before a play is counted.
@@ -22,6 +23,12 @@ export default function StickyPlayer() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [queueOpen, setQueueOpen] = useState(false);
+  /**
+   * Whether the expandable track sleeve is showing. Pure UI state: it never
+   * touches the media element or any of the effects below, so opening and
+   * closing the sleeve cannot pause or restart playback.
+   */
+  const [sleeveOpen, setSleeveOpen] = useState(false);
   // Guards against counting the same listening more than once.
   const hasCountedRef = useRef(false);
 
@@ -147,6 +154,24 @@ export default function StickyPlayer() {
     return `${m}:${s}`;
   };
 
+  /**
+   * The queue and the track sleeve both expand out of the same bar, so opening
+   * one folds the other instead of stacking two panels. Reading the current
+   * value here (rather than mutating other state inside a state updater) keeps
+   * the updates plain and StrictMode-safe.
+   */
+  const toggleQueue = () => {
+    const next = !queueOpen;
+    setQueueOpen(next);
+    if (next) setSleeveOpen(false);
+  };
+
+  const toggleSleeve = () => {
+    const next = !sleeveOpen;
+    setSleeveOpen(next);
+    if (next) setQueueOpen(false);
+  };
+
   return (
     <div
       className={`fixed inset-x-0 bottom-0 z-50 border-t border-zinc-200 bg-white shadow-[0_-4px_16px_rgba(0,0,0,0.08)] dark:border-zinc-800 dark:bg-zinc-900 ${
@@ -154,6 +179,12 @@ export default function StickyPlayer() {
       }`}
     >
       <audio ref={audioRef} src={src} preload="metadata" />
+
+      {/* expandable track sleeve – separate from the media element, so it can
+          be opened and closed without interrupting playback */}
+      {sleeveOpen && currentSong ? (
+        <TrackSleeve song={currentSong} onClose={() => setSleeveOpen(false)} />
+      ) : null}
 
       {/* expandable queue */}
       {queueOpen && queue.length > 0 ? (
@@ -202,12 +233,22 @@ export default function StickyPlayer() {
 
         {/* track info + controls */}
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-black dark:text-zinc-50">
-            {currentSong?.title}
-          </p>
-          <p className="truncate text-xs text-zinc-600 dark:text-zinc-400">
-            {currentSong ? formatSongCredits(currentSong) : ""}
-          </p>
+          {/* Clicking the title/credits toggles the track sleeve. The seek bar
+              below stays outside this button so it cannot swallow its clicks. */}
+          <button
+            type="button"
+            onClick={toggleSleeve}
+            aria-expanded={sleeveOpen}
+            aria-label="Visa låtinfo"
+            className="block w-full min-w-0 text-left"
+          >
+            <p className="truncate text-sm font-semibold text-black dark:text-zinc-50">
+              {currentSong?.title}
+            </p>
+            <p className="truncate text-xs text-zinc-600 dark:text-zinc-400">
+              {currentSong ? formatSongCredits(currentSong) : ""}
+            </p>
+          </button>
 
           <div className="mt-1 flex items-center gap-2">
             {/* play/pause button */}
@@ -272,9 +313,30 @@ export default function StickyPlayer() {
           </svg>
         </button>
 
+        {/* track info toggle – same sleeve as clicking the title */}
+        <button
+          onClick={toggleSleeve}
+          title="Låtinfo"
+          aria-label="Låtinfo"
+          aria-expanded={sleeveOpen}
+          className={`${iconButtonClass} shrink-0`}
+        >
+          <svg
+            className="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.6}
+            viewBox="0 0 16 16"
+          >
+            <circle cx="8" cy="8" r="6.25" />
+            <path d="M8 7.25v4" strokeLinecap="round" />
+            <path d="M8 4.6h.01" strokeLinecap="round" strokeWidth={2.4} />
+          </svg>
+        </button>
+
         {/* queue toggle */}
         <button
-          onClick={() => setQueueOpen((open) => !open)}
+          onClick={toggleQueue}
           title="Spellista"
           aria-label="Spellista"
           aria-expanded={queueOpen}

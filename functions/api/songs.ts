@@ -45,6 +45,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
          SELECT r2.id FROM recordings r2 WHERE r2.song_id = s.id AND r2.is_public = 1
          ORDER BY r2.is_primary DESC, r2.id DESC LIMIT 1
        )
+       WHERE s.is_published = 1
        ORDER BY r.year DESC, s.title COLLATE NOCASE`
     ).all<SongRow>();
 
@@ -58,6 +59,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
        JOIN recordings r ON r.id = rc.recording_id
        JOIN musicians m ON m.id = rc.musician_id
        WHERE r.is_public = 1
+         AND r.song_id IN (SELECT id FROM songs WHERE is_published = 1)
          AND r.id = (
          SELECT r2.id FROM recordings r2 WHERE r2.song_id = r.song_id AND r2.is_public = 1
          ORDER BY r2.is_primary DESC, r2.id DESC LIMIT 1

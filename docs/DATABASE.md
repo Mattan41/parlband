@@ -61,6 +61,13 @@ settings.
   - `lyrics`: The lyrics themselves (plain text with line breaks).
   - `sheet_music_path`: Relative path to sheet music as a PDF in R2 (optional; a
     single document per song, uploaded from the admin UI).
+  - `is_published`: `1` when the song may be shown on the site, `0` when it is a
+    draft. **Public `GET /api/songs` only returns published songs**, and `/texter`
+    reads the same endpoint, so a draft disappears from the lyrics/chords view
+    too; `GET /api/admin/songs` returns every song. Independent of
+    `recordings.is_public`/`is_primary` – a song must be published **and** have a
+    public recording to be playable. Added in
+    `0009_songs_gigs_is_published.sql`.
 
 - **recordings** – A specific recorded version of a song.
   - `id`: Autoincrement, `song_id` → `songs.id`.
@@ -105,6 +112,10 @@ settings.
   - `internal_notes`: optional notes for the band only. **Never returned by the
     public `GET /api/gigs`** – only `GET /api/admin/gigs` selects the column.
     Added in `0008_gigs_title_notes.sql`, together with `title`.
+  - `is_published`: `1` when the gig may be shown, `0` when it is a draft. The
+    public `GET /api/gigs` filters on `is_published = 1` in addition to
+    `event_date >= today`, so a draft stays out of "Kommande spelningar" even on
+    its own event day. Added in `0009_songs_gigs_is_published.sql`.
   - Nothing is seeded on purpose: an empty table means the landing page renders
     no "Kommande spelningar" section at all.
 
@@ -128,6 +139,9 @@ settings.
 - `credits` are scoped to that same primary public recording and sorted by
   musician, so the list always describes the recording that is actually played –
   not a union of every recording of the song.
+- Only **published** songs are returned (`WHERE s.is_published = 1`), and the
+  `credits` query is scoped to the same published songs, so a draft's credits
+  cannot leak through the join.
 - `recording_id` is the `recordings.id` of the exact recording that
   `mp3_path`/`wav_path` come from (the same subquery row). This is the id sent to
   `POST /api/plays` and to `GET /api/downloads`. If a song ever displays multiple
@@ -206,6 +220,10 @@ Conventions:
   `/api/admin/credits?recording_id=1&musician_id=2&instrument=Sång`.
 - `play_count` and `download_count` are read-only: they are returned but ignored
   by `POST`/`PUT`.
+- `is_published` (boolean) is accepted by `POST`/`PUT` on both songs and gigs and
+  stored as `1`/`0`. It is **optional**: a payload that omits it is treated as
+  `true`, so an older client keeps publishing. Any other type is a `400`
+  (`published_type` for gigs).
 - Setting `is_primary: true` clears the flag on the song's other recordings in
   the same `batch()`, so a song never has two primaries.
 - Deleting a recording also deletes its credits but leaves the R2 files in the
@@ -269,8 +287,8 @@ could never be observed in the browser.
 ## Gigs: GET /api/gigs and GET/POST/PUT/DELETE /api/admin/gigs
 
 - `GET /api/gigs` (public, `functions/api/gigs.ts`) returns `{ "gigs": [...] }`
-  for **today and later**, ordered by date and start time:
-  `id`, `event_date`, `start_time`, `title`, `venue`, `city`, `ticket_url`,
+  for **today and later** **and published only**, ordered by date and start
+  time: `id`, `event_date`, `start_time`, `title`, `venue`, `city`, `ticket_url`,
   `info`. Past rows stay in the table so the admin can still fix them, and
   `internal_notes` is **never** selected here – it only exists in the admin
   response.
@@ -281,7 +299,8 @@ could never be observed in the browser.
   stays visible for its whole Swedish day, until 23:59:59 local time.
 - `GET /api/admin/gigs` returns **every** gig (`event_date DESC`), so the admin
   can see and edit past dates; the UI badges them "Passerat". It also returns
-  `internal_notes`, which the public endpoint never exposes.
+  `internal_notes` and `is_published`, which the public endpoint does not expose.
+  A draft carries an **Utkast** badge in the admin list.
 - `POST` creates (`201`, `{ success, gig }`), `PUT` updates by `id` in the body
   (`404` when it does not exist) and `DELETE ?id=<n>` removes one (`404` when it
   does not exist). Invalid payloads are `400`; see `gig-rules.ts` for the rules

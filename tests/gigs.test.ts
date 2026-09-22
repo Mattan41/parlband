@@ -20,7 +20,7 @@ function payload(overrides: Record<string, unknown> = {}) {
   return {
     event_date: "2026-10-04",
     start_time: "19:00",
-    title: "Kilbyfesten",
+    title: "Boganefesten",
     venue: "Boganeberget",
     city: "Kil",
     ticket_url: "https://tickets.example.com/parlband",
@@ -180,12 +180,14 @@ describe("parseGigFields", () => {
       fields: {
         eventDate: "2026-10-04",
         startTime: "19:00",
-        title: "Kilbyfesten",
+        title: "Boganefesten",
         venue: "Boganeberget",
         city: "Kil",
         ticketUrl: "https://tickets.example.com/parlband",
         info: "med Vanten",
         internalNotes: "Boka PA i tid",
+        // Gigs are published unless the payload explicitly says otherwise.
+        isPublished: true,
       },
     });
   });
@@ -211,6 +213,7 @@ describe("parseGigFields", () => {
         ticketUrl: null,
         info: null,
         internalNotes: null,
+        isPublished: true,
       },
     });
   });
@@ -226,12 +229,13 @@ describe("parseGigFields", () => {
       fields: {
         eventDate: "2026-10-04",
         startTime: "19:00",
-        title: "Kilbyfesten",
+        title: "Boganefesten",
         venue: "Boganeberget",
         city: "Kil",
         ticketUrl: "https://tickets.example.com/parlband",
         info: "Line ett\nLine två",
         internalNotes: "Rad ett\nRad två",
+        isPublished: true,
       },
     });
   });

@@ -139,6 +139,11 @@ export default function SongSection({
             <span className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">
               {song.title}
             </span>
+            {song.is_published === 0 ? (
+              <span className="rounded bg-zinc-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200">
+                Utkast
+              </span>
+            ) : null}
           </span>
           <span className="mt-0.5 block truncate text-xs text-zinc-500 dark:text-zinc-400">
             {song.id} · {song.recordings.length} inspelning(ar)

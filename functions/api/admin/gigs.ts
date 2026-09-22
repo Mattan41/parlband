@@ -9,7 +9,7 @@ interface Env {
  * here: the public GET /api/gigs never selects it, so band-only notes cannot
  * leak to the site.
  */
-const GIG_FIELDS = `id, event_date, start_time, title, venue, city, ticket_url, info, internal_notes`;
+const GIG_FIELDS = `id, event_date, start_time, title, venue, city, ticket_url, info, internal_notes, is_published`;
 
 interface GigRow {
   id: number;
@@ -21,6 +21,8 @@ interface GigRow {
   ticket_url: string | null;
   info: string | null;
   internal_notes: string | null;
+  /** 1 when the gig is visible on the public site, 0 when it is a draft. */
+  is_published: number;
 }
 
 async function readJsonBody<T>(request: Request): Promise<T | null> {
@@ -86,8 +88,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   try {
     const result = await context.env.DB.prepare(
-      `INSERT INTO gigs (event_date, start_time, title, venue, city, ticket_url, info, internal_notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO gigs (event_date, start_time, title, venue, city, ticket_url, info, internal_notes, is_published)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
       .bind(
         fields.eventDate,
@@ -97,7 +99,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         fields.city,
         fields.ticketUrl,
         fields.info,
-        fields.internalNotes
+        fields.internalNotes,
+        fields.isPublished ? 1 : 0
       )
       .run();
 
@@ -123,7 +126,8 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   try {
     const updateResult = await context.env.DB.prepare(
       `UPDATE gigs
-       SET event_date = ?, start_time = ?, title = ?, venue = ?, city = ?, ticket_url = ?, info = ?, internal_notes = ?
+       SET event_date = ?, start_time = ?, title = ?, venue = ?, city = ?, ticket_url = ?, info = ?, internal_notes = ?,
+           is_published = ?
        WHERE id = ?`
     )
       .bind(
@@ -135,6 +139,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
         fields.ticketUrl,
         fields.info,
         fields.internalNotes,
+        fields.isPublished ? 1 : 0,
         id
       )
       .run();

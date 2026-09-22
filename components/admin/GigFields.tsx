@@ -13,6 +13,8 @@ export interface GigDraft {
   ticket_url: string;
   info: string;
   internal_notes: string;
+  /** False keeps the gig out of "Kommande spelningar" on the landing page. */
+  is_published: boolean;
 }
 
 export const emptyGigDraft: GigDraft = {
@@ -24,6 +26,7 @@ export const emptyGigDraft: GigDraft = {
   ticket_url: "",
   info: "",
   internal_notes: "",
+  is_published: true,
 };
 
 /** Convert an API gig into the editable draft shape. */
@@ -37,6 +40,7 @@ export function toGigDraft(gig: AdminGigRow): GigDraft {
     ticket_url: gig.ticket_url ?? "",
     info: gig.info ?? "",
     internal_notes: gig.internal_notes ?? "",
+    is_published: gig.is_published === 1,
   };
 }
 
@@ -51,6 +55,7 @@ export function toGigPayload(draft: GigDraft): Record<string, unknown> {
     ticket_url: draft.ticket_url,
     info: draft.info,
     internal_notes: draft.internal_notes,
+    is_published: draft.is_published,
   };
 }
 
@@ -64,7 +69,8 @@ export function gigDraftEquals(a: GigDraft, b: GigDraft): boolean {
     a.city === b.city &&
     a.ticket_url === b.ticket_url &&
     a.info === b.info &&
-    a.internal_notes === b.internal_notes
+    a.internal_notes === b.internal_notes &&
+    a.is_published === b.is_published
   );
 }
 
@@ -104,7 +110,6 @@ export default function GigFields({ draft, onChange }: Props) {
         <input
           className={inputClass}
           value={draft.title}
-          placeholder="t.ex. Kilbyfesten"
           onChange={(event) => onChange({ title: event.target.value })}
         />
         <span className="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">
@@ -140,7 +145,7 @@ export default function GigFields({ draft, onChange }: Props) {
           onBlur={(event) => handleTimeBlur(event.target.value)}
         />
         <span className="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">
-          24-timmarsformat (ingen AM/PM).
+          24-timmarsformat.
         </span>
       </label>
 
@@ -177,7 +182,7 @@ export default function GigFields({ draft, onChange }: Props) {
         <textarea
           className={`${inputClass} min-h-20`}
           value={draft.info}
-          placeholder="t.ex. med Vanten"
+          placeholder="t.ex. ta med filt, parkering 800 m bort"
           onChange={(event) => onChange({ info: event.target.value })}
         />
         <span className="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">
@@ -190,13 +195,35 @@ export default function GigFields({ draft, onChange }: Props) {
         <textarea
           className={`${inputClass} min-h-20`}
           value={draft.internal_notes}
-          placeholder="t.ex. boka PA, dubbelkolla lastintag"
+          placeholder="t.ex. ta med telekablar, tfn nr till ljudtekniker: 070-123 45 67"
           onChange={(event) => onChange({ internal_notes: event.target.value })}
         />
         <span className="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">
           Sparas men visas bara här i admin – aldrig på sajten.
         </span>
       </label>
+
+      <fieldset className="sm:col-span-2 rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
+        <legend className={labelClass}>Synlighet</legend>
+
+        <label className="flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+          <input
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-amber-600 focus:ring-amber-500"
+            checked={draft.is_published}
+            onChange={(event) =>
+              onChange({ is_published: event.target.checked })
+            }
+          />
+          <span>
+            Publicerad (visas på hemsidan)
+            <span className="block text-xs text-zinc-500 dark:text-zinc-400">
+              Avmarkera för att spara datumet som utkast – det visas då inte
+              under Kommande spelningar på startsidan.
+            </span>
+          </span>
+        </label>
+      </fieldset>
     </div>
   );
 }

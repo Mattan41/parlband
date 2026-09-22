@@ -30,8 +30,16 @@ export interface SongRow {
   mp3_path: string | null;
   wav_path: string | null;
   cover_path: string | null;
+  /**
+   * Derived counter, kept on the wire for the admin area only – the public
+   * song list deliberately no longer renders it (see components/SongRow.tsx).
+   */
   play_count: number | null;
-  /** Number of WAV downloads, counted by GET /api/downloads. */
+  /**
+   * Number of WAV downloads, counted by GET /api/downloads. Admin-only, like
+   * `play_count` – the public download button still routes through the
+   * counting endpoint, it just does not display the total.
+   */
   download_count: number | null;
   credits: SongCredit[];
 }

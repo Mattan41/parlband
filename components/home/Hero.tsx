@@ -80,7 +80,7 @@ export default function Hero({ welcomeText }: Props) {
         ) : null}
 
         <p className="mt-3 text-xs text-zinc-600 sm:text-sm dark:text-zinc-400">
-          Bokning & kontakt:{" "}
+          kontakt:{" "}
           <a
             href={`mailto:${CONTACT_EMAIL}`}
             className="font-medium text-zinc-900 underline underline-offset-4 transition hover:text-black dark:text-zinc-200 dark:hover:text-white"

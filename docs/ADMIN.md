@@ -56,6 +56,12 @@ destination can never leave the write endpoints open:
   the modal on success; "Avbryt", Esc or a click outside cancels.
 - The **id (slug)** is derived from the title and is used in file names. It may
   only contain `a-z`, `0-9` and hyphens.
+- **Text** is edited in its own block (`LyricsEditor`): write plain lyrics and put
+  chord lines on their own row, directly above the lyric line they belong to.
+  **Visa i stor vy** opens the same text in a full-screen overlay for a better
+  overview; the overlay edits the same field, so nothing is saved twice. Outside a
+  modal Esc closes it – inside the "Ny låt" modal use **Stäng** (Esc there closes
+  the song modal itself).
 - **Edit** any of the fields on an existing song and press "Spara låt".
   Only **one song is expanded at a time** – opening another collapses the
   previous one.
@@ -65,8 +71,15 @@ destination can never leave the write endpoints open:
   "Du har osparade ändringar. Stäng ändå?" first.
 - After a new song is saved it is **expanded automatically**, so uploading notes
   and adding the first recording is the visible next step.
-- A song only becomes **public** once it has a recording with an `mp3_path` that
-  is also marked **Publik** – `GET /api/songs` filters out songs without one.
+- A song becomes **public** only when it is marked **Publicerad** _and_ has a
+  recording with an `mp3_path` that is also marked **Publik** – `GET /api/songs`
+  filters out anything else. The **Publicerad** checkbox lives under **Synlighet**
+  in the song form and is ticked for new songs; unchecking it turns the song into
+  a **draft**, which shows an **Utkast** badge in the admin list and disappears
+  from both the landing page and `/texter` while staying fully editable here.
+- **Skapa som utkast** in the "Ny låt" modal creates the song unpublished in one
+  step, without having to untick the checkbox first. The toast then says
+  "Utkastet … skapades" instead of "Låten … skapades".
 - **Delete a song** with **Ta bort låt** in its Låtinfo panel. A song that still
   has recordings is refused (`409`, "Låten har inspelningar – ta bort dem
   först.") – delete its recordings first. Only the `songs` row is removed; R2
@@ -116,7 +129,10 @@ A song can have several recordings (e.g. studio + live).
   errors stay until you close them.
 - Feedback that belongs to an open modal or a card (save errors, upload status,
   credits) is shown **inline** there instead – a native dialog sits above
-  everything, so a toast would be hidden behind it.
+  everything, so a toast would be hidden behind it. Inside a recording card that
+  message is rendered **next to Spara/Ta bort** (between the upload buttons and
+  the action row), not at the top of the card, so a save or upload confirmation is
+  visible without scrolling on a phone.
 - The initial load retries once automatically. If it still fails you get
   **"Försök igen"**, and when the session has expired (401/403) a distinct
   **"Sessionen har gått ut"** message with **"Ladda om"**. An offline browser and
@@ -160,11 +176,11 @@ separate save is needed for the file.
 
 - **Katalog | Spelningar | Om oss** in the admin nav; **Spelningar** opens
   `/admin/gigs`, the gig calendar.
-- **+ Nytt datum** creates a date in a modal (date and venue required; title,
+- **+ Nytt spelning** creates a date in a modal (date and venue required; title,
   time, city, ticket link, info and internal notes are optional). A failed save
   keeps the modal open with your input and shows the error there; closing with
   unsaved input asks "Du har osparade ändringar. Stäng ändå?" first.
-- **Enter never saves.** Only the **Spara**/**Skapa datum** button submits; a
+- **Enter never saves.** Only the **Spara**/**Skapa utkast** button submits; a
   stray keypress in a field (e.g. the venue) can no longer commit a half-written
   date. Inside the multi-line fields Enter inserts a line break, as expected.
 - **Titel** is the gig's own name (e.g. a festival) and makes a date easy to
@@ -180,6 +196,11 @@ separate save is needed for the file.
   the admin (a row with a note carries a small **Anteckning** badge) but the
   public `GET /api/gigs` never selects the column, so they cannot appear on the
   site.
+- **Publicerad** (`is_published`) is ticked by default and decides whether the
+  date may appear under "Kommande spelningar". Unticking it (or using **Skapa som
+  utkast** in the "Ny spelning" modal) makes the date a **draft**: it stays in this
+  list with an **Utkast** badge, but the public `GET /api/gigs` filters it out
+  even on the day of the event.
 - Existing dates are an accordion: one row is open at a time, and the collapsed
   row shows the Swedish date (e.g. `sön 4 okt. 2026`), the time, the title, the
   venue and whether it has passed.

@@ -20,6 +20,8 @@ export interface GigRow {
  */
 export interface AdminGigRow extends GigRow {
   internal_notes: string | null;
+  /** 1 when the gig is visible on the public site, 0 when it is a draft. */
+  is_published: number;
 }
 
 /**
