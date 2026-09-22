@@ -199,14 +199,21 @@ separate save is needed for the file.
 - **Titel** is the gig's own name (e.g. a festival) and makes a date easy to
   recognise in the list. It is optional and **is shown on the public site** when
   filled in.
-- **Tid** uses the native **clock picker** (`type="time"`). Its value is always
-  strict 24-hour `HH:MM` whatever the browser displays, and the picker refuses
-  invalid clock times; typing four digits also works, so `1930` lands on `19:30`.
-  `normalizeGigTime` (data/gigs.ts) is the safety net on blur and on load, so
-  legacy values (`9:05`, `19:00:00`, `930`) are tidied as well. Nothing is ever
-  rendered as AM/PM, there is no timezone conversion and no seconds: date and time
-  stay plain strings (`YYYY-MM-DD` and `HH:MM`). A value the API cannot parse is
-  refused with Swedish copy (`time_invalid`).
+- **Datum** is a plain `ÅÅÅÅ-MM-DD` text field with a **Kalender** button beside
+  it that opens the browser's date picker. The field itself stays free text, so
+  the picker's locale display never changes what is stored; `parseGigFields` still
+  validates the ISO form server-side.
+- **Tid** is a **plain text field** (not the native clock widget, which follows
+  the browser's locale – AM/PM on an en-US machine – and does not accept four
+  digits typed straight through). Type strict 24-hour `HH:MM`, or just four
+  digits: `1930` lands on `19:30`. A **clock button** beside the field opens the
+  browser's time picker, which writes back the same 24-hour value.
+  `normalizeGigTime` (data/gigs.ts) tidies the
+  value on blur and on load, so legacy values (`9:05`, `19:00:00`, `930`) are
+  normalised as well. Nothing is ever rendered as AM/PM, there is no timezone
+  conversion and no seconds: date and time stay plain strings (`YYYY-MM-DD` and
+  `HH:MM`). A value the API cannot parse is refused with Swedish copy
+  (`time_invalid`).
 - **Info** is a multi-line field: the line breaks are kept and rendered as rows
   on the landing page.
 - **Interna anteckningar** are for the band only. They are stored and shown in
@@ -221,9 +228,8 @@ separate save is needed for the file.
   published date and carries no visibility control.
 - Existing dates are an accordion: one row is open at a time, and the collapsed
   row shows the date as **`ÅÅÅÅ-MM-DD`** (e.g. `2026-10-04`), the time, the title,
-  the venue and whether it has passed. A native date picker renders in the
-  browser's locale, so the stored ISO form is echoed as text beneath the field –
-  the same `ÅÅÅÅ-MM-DD` form the public list shows.
+  the venue and whether it has passed – the same `ÅÅÅÅ-MM-DD` form the Datum field
+  and the public list use.
 - Dates from **today and later** are what the landing page shows; a gig that has
   passed stays in the list with a **Passerat** badge but is no longer public.
 - A venue is required and a ticket link must be an `http(s)` URL, otherwise the

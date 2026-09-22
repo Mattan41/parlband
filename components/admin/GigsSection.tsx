@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import AdminModal from "./AdminModal";
 import GigFields, {
   emptyGigDraft,
@@ -315,6 +315,12 @@ function NewGigModal({ open, onClose, onCreated, notify }: ModalProps) {
   const [draft, setDraft] = useState<GigDraft>(emptyGigDraft);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * Set by the "Skapa som utkast" button right before the form submits. A ref
+   * (not state) because the click and the submit are separate events and the
+   * flag must be read synchronously, with no chance of a stale render.
+   */
+  const createAsDraftRef = useRef(false);
 
   const isDirty = !gigDraftEquals(draft, emptyGigDraft);
 
@@ -333,9 +339,18 @@ function NewGigModal({ open, onClose, onCreated, notify }: ModalProps) {
     event.preventDefault();
     setSaving(true);
     setError(null);
+    // Read on submit: true only when the draft button triggered this submit.
+    const asDraft = createAsDraftRef.current;
     try {
-      await adminJson("/api/admin/gigs", "POST", toGigPayload(draft));
-      notify("Spelningen skapades.", "success");
+      await adminJson("/api/admin/gigs", "POST", {
+        ...toGigPayload(draft),
+        is_published: asDraft ? false : draft.is_published,
+      });
+      notify(
+        asDraft ? "Utkastet skapades." : "Spelningen skapades.",
+        "success"
+      );
+      createAsDraftRef.current = false;
       setDraft(emptyGigDraft);
       await onCreated();
     } catch (cause) {
@@ -350,7 +365,7 @@ function NewGigModal({ open, onClose, onCreated, notify }: ModalProps) {
     <AdminModal
       open={open}
       title="Ny spelning"
-      help="Fyll i datum och spelställe. Datum från och med idag visas under Kommande spelningar på startsidan; en tom lista renderas inte alls. Titel, tid, ort, biljettlänk och info är valfria – allt utom de interna anteckningarna kan synas på sajten. Opublicera datumet i efterhand med Publicerad i listan. Bara Spara-knappen sparar, inte Enter."
+      help="Fyll i datum och spelställe. Datum från och med idag visas under Kommande spelningar på startsidan; en tom lista renderas inte alls. Titel, tid, ort, biljettlänk och info är valfria – allt utom de interna anteckningarna kan synas på sajten. Med Skapa som utkast sparas datumet opublicerad, och du publicerar det i efterhand med Publicerad i listan. Bara knapparna sparar, inte Enter."
       busy={saving}
       onClose={close}
     >
@@ -378,8 +393,21 @@ function NewGigModal({ open, onClose, onCreated, notify }: ModalProps) {
             type="submit"
             className={primaryButtonClass}
             disabled={saving}
+            onClick={() => {
+              createAsDraftRef.current = false;
+            }}
           >
             {saving ? "Sparar…" : "Spara och publicera"}
+          </button>
+          <button
+            type="submit"
+            className={secondaryButtonClass}
+            disabled={saving}
+            onClick={() => {
+              createAsDraftRef.current = true;
+            }}
+          >
+            Skapa som utkast
           </button>
           <button
             type="button"

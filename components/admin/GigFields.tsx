@@ -1,7 +1,13 @@
 "use client";
 
+import { useRef, useState } from "react";
 import { normalizeGigTime, type AdminGigRow } from "@/data/gigs";
-import { inputClass, labelClass } from "./adminStyles";
+import TimePickerPopover from "./TimePickerPopover";
+import {
+  inputClass,
+  labelClass,
+  secondaryButtonClass,
+} from "./adminStyles";
 
 /** Editable gig fields, shared by the "new date" modal and the inline editor. */
 export interface GigDraft {
@@ -33,8 +39,9 @@ export const emptyGigDraft: GigDraft = {
 export function toGigDraft(gig: AdminGigRow): GigDraft {
   return {
     event_date: gig.event_date,
-    // Normalised so legacy values (`9:05`, `19:00:00`) actually populate the
-    // `type="time"` input, which only accepts a strict HH:MM.
+    // Normalised on load so the text field – and the picker's highlighted
+    // selection – always start from a clean HH:MM, even for legacy values such
+    // as `9:05` or `19:00:00`.
     start_time: normalizeGigTime(gig.start_time ?? ""),
     title: gig.title ?? "",
     venue: gig.venue,
@@ -93,6 +100,36 @@ export default function GigFields({
   onChange,
   showVisibility = true,
 }: Props) {
+  const dateInputRef = useRef<HTMLInputElement>(null);
+  const timeButtonRef = useRef<HTMLButtonElement>(null);
+  const [timePickerOpen, setTimePickerOpen] = useState(false);
+
+  /**
+   * The visible Datum field is plain text, so the browser's locale never leaks
+   * into what is stored. The calendar button opens a hidden native `type="date"`
+   * input instead; its picker writes the same ISO value back through `onChange`.
+   */
+  function openDatePicker() {
+    const input = dateInputRef.current;
+    if (!input) return;
+
+    if (typeof input.showPicker === "function") {
+      try {
+        input.showPicker();
+        return;
+      } catch {
+        // Not allowed (or no picker); fall through to focus().
+      }
+    }
+    input.focus();
+  }
+
+  // A `type="date"` input only accepts a strict YYYY-MM-DD value, so free text
+  // mid-typing is passed as empty to keep React from warning about it.
+  const isoDate = /^\d{4}-\d{2}-\d{2}$/.test(draft.event_date)
+    ? draft.event_date
+    : "";
+
   /**
    * Tidy the time up once the field loses focus (`9:05` → `09:05`). An unusable
    * value is left exactly as typed, so the API rejects it and the Swedish error
@@ -120,35 +157,108 @@ export default function GigFields({
 
       <label>
         <span className={labelClass}>Datum (ÅÅÅÅ-MM-DD)</span>
-        <input
-          type="date"
-          className={inputClass}
-          value={draft.event_date}
-          onChange={(event) => onChange({ event_date: event.target.value })}
-        />
-        {/* The native picker renders in the browser's own locale, so the stored
-            ISO form is echoed here to keep ÅÅÅÅ-MM-DD unambiguous. */}
-        <span className="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">
-          {draft.event_date ? draft.event_date : "Inget datum valt"}
-        </span>
+        {/* A plain text field instead of `type="date"`: the native picker renders
+            in the browser's own locale (e.g. `mm/dd/yyyy`). The value is free text
+            and `parseGigFields` validates the YYYY-MM-DD form server-side; the
+            Kalender button opens the hidden native picker for convenience. */}
+        <div className="flex gap-2">
+          <input
+            type="text"
+            className={inputClass}
+            value={draft.event_date}
+            inputMode="numeric"
+            autoComplete="off"
+            maxLength={10}
+            placeholder="ÅÅÅÅ-MM-DD"
+            onChange={(event) => onChange({ event_date: event.target.value })}
+          />
+          <button
+            type="button"
+            onClick={openDatePicker}
+            title="Öppna kalendern"
+            aria-label="Öppna kalendern"
+            className={`${secondaryButtonClass} shrink-0`}
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.6}
+              viewBox="0 0 16 16"
+              aria-hidden="true"
+            >
+              <rect x="2" y="3.25" width="12" height="11" rx="1.5" />
+              <path
+                d="M2 6.5h12M5.5 1.75v2.5M10.5 1.75v2.5"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+          {/* Hidden native input: only the picker UI, never the displayed value. */}
+          <input
+            ref={dateInputRef}
+            type="date"
+            className="sr-only"
+            tabIndex={-1}
+            value={isoDate}
+            onChange={(event) => onChange({ event_date: event.target.value })}
+          />
+        </div>
       </label>
 
       <label>
         <span className={labelClass}>Tid (valfritt)</span>
-        {/* `type="time"` gives the native clock picker. Its value is always
-            24-hour HH:MM whatever the browser displays, and the picker refuses
-            invalid clock times; `normalizeGigTime` on blur is the safety net for
-            pasted or legacy values (`930` → `09:30`). */}
-        <input
-          type="time"
-          className={inputClass}
-          value={draft.start_time}
-          autoComplete="off"
-          onChange={(event) => onChange({ start_time: event.target.value })}
-          onBlur={(event) => handleTimeBlur(event.target.value)}
-        />
+        {/* A plain text field instead of `type="time"`: the native widget follows
+            the browser's locale (AM/PM on an en-US machine) and cannot be styled
+            to match the admin surface. The text input stays authoritative and
+            `normalizeGigTime` tidies what is typed; the clock button toggles the
+            custom 24-hour TimePickerPopover. */}
+        <div className="relative flex gap-2">
+          <input
+            type="text"
+            className={inputClass}
+            value={draft.start_time}
+            inputMode="numeric"
+            autoComplete="off"
+            maxLength={5}
+            placeholder="t.ex. 19:00"
+            onChange={(event) => onChange({ start_time: event.target.value })}
+            onBlur={(event) => handleTimeBlur(event.target.value)}
+          />
+          <button
+            ref={timeButtonRef}
+            type="button"
+            onClick={() => setTimePickerOpen((open) => !open)}
+            title="Välj tid"
+            aria-label="Välj tid"
+            aria-haspopup="dialog"
+            aria-expanded={timePickerOpen}
+            className={`${secondaryButtonClass} shrink-0`}
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.6}
+              viewBox="0 0 16 16"
+              aria-hidden="true"
+            >
+              <circle cx="8" cy="8" r="6.25" />
+              <path d="M8 4.25V8l2.5 1.75" strokeLinecap="round" />
+            </svg>
+          </button>
+          {timePickerOpen ? (
+            <TimePickerPopover
+              value={draft.start_time}
+              onChange={(startTime) => onChange({ start_time: startTime })}
+              onClose={() => setTimePickerOpen(false)}
+              anchorRef={timeButtonRef}
+            />
+          ) : null}
+        </div>
         <span className="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">
-          24-timmarsformat. Fyra siffror går också bra, t.ex. 1930.
+          Skriv tiden i 24-timmarsformat, t.ex. 19:00. Fyra siffror går också bra
+          (1930).
         </span>
       </label>
 

@@ -75,7 +75,7 @@ export default function ContentEditor({ initialContent }: Props) {
             Välkomsttexten visas på startsidan, rubriken och texten på /about.
             Radbrytningar bevaras i välkomsttexten och i Om oss-texten; rubriken
             är en enkel rad. En tom välkomsttext döljer raden, och en tom rubrik
-            blir ”Om oss”. Enter sparar inte – använd Spara texterna.
+            blir ”Om oss”.
           </p>
         </div>
         <Link
