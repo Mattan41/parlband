@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  formatGigDate,
   formatGigTime,
   isPastGig,
   normalizeGigTime,
@@ -29,18 +28,6 @@ function payload(overrides: Record<string, unknown> = {}) {
     ...overrides,
   };
 }
-
-describe("formatGigDate", () => {
-  it("formats an ISO date in Swedish without shifting the day", () => {
-    expect(formatGigDate("2026-10-04")).toBe("sön 4 okt. 2026");
-    expect(formatGigDate("2026-01-01")).toBe("tors 1 jan. 2026");
-    expect(formatGigDate("2027-12-31")).toBe("fre 31 dec. 2027");
-  });
-
-  it("passes an unparseable value through unchanged", () => {
-    expect(formatGigDate("not-a-date")).toBe("not-a-date");
-  });
-});
 
 describe("formatGigTime", () => {
   it("prefixes a set time in Swedish 24-hour form", () => {
@@ -82,12 +69,23 @@ describe("normalizeGigTime", () => {
     expect(normalizeGigTime("23:59")).toBe("23:59");
   });
 
+  it("turns four typed digits into HH:MM", () => {
+    expect(normalizeGigTime("1930")).toBe("19:30");
+    expect(normalizeGigTime("1234")).toBe("12:34");
+    expect(normalizeGigTime("930")).toBe("09:30");
+    expect(normalizeGigTime("0000")).toBe("00:00");
+    expect(normalizeGigTime("2330")).toBe("23:30");
+  });
+
   it("returns an empty string for input the API would reject", () => {
     expect(normalizeGigTime("")).toBe("");
     expect(normalizeGigTime("   ")).toBe("");
     expect(normalizeGigTime("25:00")).toBe("");
     expect(normalizeGigTime("19:60")).toBe("");
     expect(normalizeGigTime("7pm")).toBe("");
+    expect(normalizeGigTime("2560")).toBe("");
+    expect(normalizeGigTime("99")).toBe("");
+    expect(normalizeGigTime("12345")).toBe("");
   });
 });
 

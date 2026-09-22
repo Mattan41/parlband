@@ -33,7 +33,9 @@ export const emptyGigDraft: GigDraft = {
 export function toGigDraft(gig: AdminGigRow): GigDraft {
   return {
     event_date: gig.event_date,
-    start_time: gig.start_time ?? "",
+    // Normalised so legacy values (`9:05`, `19:00:00`) actually populate the
+    // `type="time"` input, which only accepts a strict HH:MM.
+    start_time: normalizeGigTime(gig.start_time ?? ""),
     title: gig.title ?? "",
     venue: gig.venue,
     city: gig.city ?? "",
@@ -74,25 +76,23 @@ export function gigDraftEquals(a: GigDraft, b: GigDraft): boolean {
   );
 }
 
-/**
- * Stops Enter from submitting a gig form: only the explicit save button saves,
- * so a half-written row is never committed by a stray keypress. A `<textarea>`
- * is exempt, because there Enter has to insert a line break.
- */
-export function blockEnterSubmit(
-  event: React.KeyboardEvent<HTMLFormElement>
-): void {
-  if (event.key === "Enter" && event.target instanceof HTMLInputElement) {
-    event.preventDefault();
-  }
-}
-
 interface Props {
   draft: GigDraft;
   onChange: (patch: Partial<GigDraft>) => void;
+  /**
+   * Renders the "Synlighet" fieldset with the **Publicerad** checkbox. Passed
+   * `false` by the "Nytt datum" modal: a new date is always created published,
+   * and the publish toggle belongs to the editor so there is exactly one control
+   * in exactly one place.
+   */
+  showVisibility?: boolean;
 }
 
-export default function GigFields({ draft, onChange }: Props) {
+export default function GigFields({
+  draft,
+  onChange,
+  showVisibility = true,
+}: Props) {
   /**
    * Tidy the time up once the field loses focus (`9:05` → `09:05`). An unusable
    * value is left exactly as typed, so the API rejects it and the Swedish error
@@ -119,33 +119,36 @@ export default function GigFields({ draft, onChange }: Props) {
       </label>
 
       <label>
-        <span className={labelClass}>Datum</span>
+        <span className={labelClass}>Datum (ÅÅÅÅ-MM-DD)</span>
         <input
           type="date"
           className={inputClass}
           value={draft.event_date}
           onChange={(event) => onChange({ event_date: event.target.value })}
         />
+        {/* The native picker renders in the browser's own locale, so the stored
+            ISO form is echoed here to keep ÅÅÅÅ-MM-DD unambiguous. */}
+        <span className="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">
+          {draft.event_date ? draft.event_date : "Inget datum valt"}
+        </span>
       </label>
 
       <label>
         <span className={labelClass}>Tid (valfritt)</span>
-        {/* A plain text field instead of `type="time"`: the native time picker
-            follows the browser's own locale and shows AM/PM on an en-US machine,
-            while the band wants strict 24-hour input. `normalizeGigTime` turns
-            what is typed into the HH:MM the API stores. */}
+        {/* `type="time"` gives the native clock picker. Its value is always
+            24-hour HH:MM whatever the browser displays, and the picker refuses
+            invalid clock times; `normalizeGigTime` on blur is the safety net for
+            pasted or legacy values (`930` → `09:30`). */}
         <input
+          type="time"
           className={inputClass}
           value={draft.start_time}
-          inputMode="numeric"
           autoComplete="off"
-          maxLength={5}
-          placeholder="t.ex. 19:00"
           onChange={(event) => onChange({ start_time: event.target.value })}
           onBlur={(event) => handleTimeBlur(event.target.value)}
         />
         <span className="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">
-          24-timmarsformat.
+          24-timmarsformat. Fyra siffror går också bra, t.ex. 1930.
         </span>
       </label>
 
@@ -203,27 +206,29 @@ export default function GigFields({ draft, onChange }: Props) {
         </span>
       </label>
 
-      <fieldset className="sm:col-span-2 rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
-        <legend className={labelClass}>Synlighet</legend>
+      {showVisibility ? (
+        <fieldset className="sm:col-span-2 rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
+          <legend className={labelClass}>Synlighet</legend>
 
-        <label className="flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300">
-          <input
-            type="checkbox"
-            className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-amber-600 focus:ring-amber-500"
-            checked={draft.is_published}
-            onChange={(event) =>
-              onChange({ is_published: event.target.checked })
-            }
-          />
-          <span>
-            Publicerad (visas på hemsidan)
-            <span className="block text-xs text-zinc-500 dark:text-zinc-400">
-              Avmarkera för att spara datumet som utkast – det visas då inte
-              under Kommande spelningar på startsidan.
+          <label className="flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-amber-600 focus:ring-amber-500"
+              checked={draft.is_published}
+              onChange={(event) =>
+                onChange({ is_published: event.target.checked })
+              }
+            />
+            <span>
+              Publicerad (visas på hemsidan)
+              <span className="block text-xs text-zinc-500 dark:text-zinc-400">
+                Avmarkera för att spara datumet som utkast – det visas då inte
+                under Kommande spelningar på startsidan.
+              </span>
             </span>
-          </span>
-        </label>
-      </fieldset>
+          </label>
+        </fieldset>
+      ) : null}
     </div>
   );
 }

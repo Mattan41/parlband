@@ -13,6 +13,7 @@ import {
   type AdminUploadKind,
 } from "@/data/admin";
 import CreditsEditor from "./CreditsEditor";
+import { blockEnterSubmit } from "./adminForms";
 import {
   dangerButtonClass,
   inputClass,
@@ -402,7 +403,7 @@ export default function RecordingCard({
       <div hidden={!expanded} className="p-3">
         {/* Only the recording fields/actions: the credits editor below is its
             own form and must NOT be nested (nested forms break submission). */}
-        <form onSubmit={handleSave}>
+        <form onSubmit={handleSave} onKeyDown={blockEnterSubmit}>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label>
               <span className={labelClass}>Album</span>

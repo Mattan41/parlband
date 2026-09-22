@@ -5,6 +5,7 @@ import Link from "next/link";
 import { adminJson } from "@/data/admin";
 import type { SiteContent } from "@/data/content";
 import { inputClass, labelClass, primaryButtonClass } from "./adminStyles";
+import { blockEnterSubmit } from "./adminForms";
 
 interface Props {
   /** Copy loaded by the page, used as the initial (and "saved") value. */
@@ -72,8 +73,9 @@ export default function ContentEditor({ initialContent }: Props) {
           </h2>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
             Välkomsttexten visas på startsidan, rubriken och texten på /about.
-            Radbrytningar bevaras. En tom välkomsttext döljer raden, och en tom
-            rubrik blir ”Om oss”.
+            Radbrytningar bevaras i välkomsttexten och i Om oss-texten; rubriken
+            är en enkel rad. En tom välkomsttext döljer raden, och en tom rubrik
+            blir ”Om oss”. Enter sparar inte – använd Spara texterna.
           </p>
         </div>
         <Link
@@ -86,7 +88,7 @@ export default function ContentEditor({ initialContent }: Props) {
         </Link>
       </div>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} onKeyDown={blockEnterSubmit}>
         <label>
           <span className={labelClass}>Välkomsttext (startsidan)</span>
           <textarea

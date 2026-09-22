@@ -56,9 +56,21 @@ interface Props {
   draft: SongDraft;
   onChange: (patch: Partial<SongDraft>) => void;
   idPrefix: string;
+  /**
+   * Renders the "Synlighet" fieldset with the **Publicerad** checkbox. Passed
+   * `false` by the "Ny låt" modal: a new song is always created published, and
+   * the publish toggle belongs to the editor so there is exactly one control in
+   * exactly one place.
+   */
+  showVisibility?: boolean;
 }
 
-export default function SongFields({ draft, onChange, idPrefix }: Props) {
+export default function SongFields({
+  draft,
+  onChange,
+  idPrefix,
+  showVisibility = true,
+}: Props) {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <label className="sm:col-span-2">
@@ -118,27 +130,29 @@ export default function SongFields({ draft, onChange, idPrefix }: Props) {
         />
       </div>
 
-      <fieldset className="sm:col-span-2 rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
-        <legend className={labelClass}>Synlighet</legend>
+      {showVisibility ? (
+        <fieldset className="sm:col-span-2 rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
+          <legend className={labelClass}>Synlighet</legend>
 
-        <label className="flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300">
-          <input
-            type="checkbox"
-            className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-amber-600 focus:ring-amber-500"
-            checked={draft.is_published}
-            onChange={(event) =>
-              onChange({ is_published: event.target.checked })
-            }
-          />
-          <span>
-            Publicerad (visas på hemsidan)
-            <span className="block text-xs text-zinc-500 dark:text-zinc-400">
-              Avmarkera för att spara låten som utkast – den visas då varken i
-              låtlistan eller under Texter.
+          <label className="flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-amber-600 focus:ring-amber-500"
+              checked={draft.is_published}
+              onChange={(event) =>
+                onChange({ is_published: event.target.checked })
+              }
+            />
+            <span>
+              Publicerad (visas på hemsidan)
+              <span className="block text-xs text-zinc-500 dark:text-zinc-400">
+                Avmarkera för att spara låten som utkast – den visas då varken i
+                låtlistan eller under Texter.
+              </span>
             </span>
-          </span>
-        </label>
-      </fieldset>
+          </label>
+        </fieldset>
+      ) : null}
     </div>
   );
 }

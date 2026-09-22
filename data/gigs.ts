@@ -1,7 +1,11 @@
 /** A gig as returned by GET /api/gigs and (with notes) GET /api/admin/gigs. */
 export interface GigRow {
   id: number;
-  /** ISO calendar date, `YYYY-MM-DD` (stored as text; string compare = date compare). */
+  /**
+   * ISO calendar date, `YYYY-MM-DD` (stored as text; string compare = date
+   * compare). Shown as-is in both the admin and the public list, so the same
+   * ÅÅÅÅ-MM-DD form appears everywhere.
+   */
   event_date: string;
   /** 24-hour start time, `HH:MM`, or null when it is not set yet. */
   start_time: string | null;
@@ -24,43 +28,38 @@ export interface AdminGigRow extends GigRow {
   is_published: number;
 }
 
-/**
- * Swedish label for an ISO date, e.g. `"sön 4 okt. 2026"`.
- *
- * Built from the date parts instead of `new Date("2026-10-04")`: the latter is
- * parsed as UTC midnight and would render as the previous day in any timezone
- * behind UTC. The `sv-SE` short form is what Swedish sites conventionally show
- * (lowercase weekday, abbreviated month with a trailing period).
- */
-export function formatGigDate(isoDate: string): string {
-  const [year, month, day] = isoDate.split("-").map(Number);
-  if (!year || !month || !day) return isoDate;
-
-  return new Intl.DateTimeFormat("sv-SE", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(year, month - 1, day));
-}
-
 /** `HH:MM` in 24-hour form, tolerating a stored `HH:MM:SS` or a bare hour. */
 const TIME_PATTERN = /^(\d{1,2}):([0-5]\d)(?::[0-5]\d)?$/;
 
 /**
+ * Compact digit form, `HMM`/`HHMM` (e.g. `930`, `1930`), so a time typed as
+ * four digits – or pasted from a spreadsheet – still lands on the `HH:MM` the
+ * API stores. Three digits read as `H:MM`, four as `HH:MM`; anything that does
+ * not describe a real clock time (e.g. `2560`) is rejected.
+ */
+const COMPACT_TIME_PATTERN = /^(\d{1,2})([0-5]\d)$/;
+
+/**
  * Normalise an admin-entered time to the `HH:MM` the API accepts.
  *
- * `"19:00"`, `"9:05"` and `"19:00:00"` all become `"09:05"`/`"19:00"`; anything
- * unusable (or empty) becomes `""`, so the optional field can stay blank.
+ * `"19:00"`, `"9:05"`, `"19:00:00"` and `"1930"` all become `"19:00"`/`"09:05"`;
+ * anything unusable (or empty) becomes `""`, so the optional field can stay
+ * blank.
  */
 export function normalizeGigTime(value: string): string {
-  const match = TIME_PATTERN.exec(value.trim());
-  if (!match) return "";
+  const trimmed = value.trim();
 
-  const hour = Number(match[1]);
-  if (hour > 23) return "";
+  for (const pattern of [TIME_PATTERN, COMPACT_TIME_PATTERN]) {
+    const match = pattern.exec(trimmed);
+    if (!match) continue;
 
-  return `${String(hour).padStart(2, "0")}:${match[2]}`;
+    const hour = Number(match[1]);
+    if (hour > 23) return "";
+
+    return `${String(hour).padStart(2, "0")}:${match[2]}`;
+  }
+
+  return "";
 }
 
 /**

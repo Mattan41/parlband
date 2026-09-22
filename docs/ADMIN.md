@@ -74,12 +74,17 @@ destination can never leave the write endpoints open:
 - A song becomes **public** only when it is marked **Publicerad** _and_ has a
   recording with an `mp3_path` that is also marked **Publik** – `GET /api/songs`
   filters out anything else. The **Publicerad** checkbox lives under **Synlighet**
-  in the song form and is ticked for new songs; unchecking it turns the song into
-  a **draft**, which shows an **Utkast** badge in the admin list and disappears
-  from both the landing page and `/texter` while staying fully editable here.
-- **Skapa som utkast** in the "Ny låt" modal creates the song unpublished in one
-  step, without having to untick the checkbox first. The toast then says
-  "Utkastet … skapades" instead of "Låten … skapades".
+  in the song editor; unchecking it turns the song into a **draft**, which shows
+  an **Utkast** badge in the admin list and disappears from both the landing page
+  and `/texter` while staying fully editable here.
+- **Visibility is an editing concern, not a creation one.** A new song is always
+  created published – the "Ny låt" modal carries no visibility control – and the
+  single **Publicerad** checkbox in the editor is what unpublishes it later. One
+  control, in one place.
+- The **id (slug)** is chosen in the "Ny låt" modal and **cannot be changed
+  afterwards**: it names the R2 files (`<id>.pdf`, `<id>-<hash>.mp3`), is the
+  foreign key on `recordings` and appears in `/texter?song=<id>` links. The song
+  header therefore carries the reminder `id:t kan inte ändras`.
 - **Delete a song** with **Ta bort låt** in its Låtinfo panel. A song that still
   has recordings is refused (`409`, "Låten har inspelningar – ta bort dem
   först.") – delete its recordings first. Only the `songs` row is removed; R2
@@ -169,8 +174,13 @@ separate save is needed for the file.
   `<song-id>.pdf`) and the stored path – it does not add a second document.
 - A public download link is planned; for now the band opens the PDF with
   "Öppna noter ↗" above.
-- The manual "Noter (R2-sökväg, manuell)" field is still available for setting a
-  path by hand.
+- The manual "Noter (R2-sökväg, manuell)" field is still available for a legacy
+  document that does not follow the `<song-id>.pdf` convention. Unlike before, it
+  is **checked before it saves**: the value must be a bare `.pdf` file name and the
+  object must exist in R2, otherwise the save is refused with `pdf_invalid` or
+  `pdf_missing` (shown in Swedish). The check only runs when the path actually
+  changes, so an old row with an unusual key can still be edited; clearing the path
+  never needs a check.
 
 ## Spelningar ("Kommande spelningar")
 
@@ -180,16 +190,23 @@ separate save is needed for the file.
   time, city, ticket link, info and internal notes are optional). A failed save
   keeps the modal open with your input and shows the error there; closing with
   unsaved input asks "Du har osparade ändringar. Stäng ändå?" first.
-- **Enter never saves.** Only the **Spara**/**Skapa utkast** button submits; a
-  stray keypress in a field (e.g. the venue) can no longer commit a half-written
-  date. Inside the multi-line fields Enter inserts a line break, as expected.
+- **Enter never saves** in the gig editor: only the **Spara** button submits, so a
+  stray keypress in a field (e.g. the venue) cannot commit a half-written date.
+  Inside the multi-line fields Enter inserts a line break, as expected. The same
+  guard (`components/admin/adminForms.ts`) is used by the song, recording and page
+  copy editors; the small add/rename forms for credits and musicians deliberately
+  keep Enter-to-submit, where typing a name and pressing Enter is the point.
 - **Titel** is the gig's own name (e.g. a festival) and makes a date easy to
   recognise in the list. It is optional and **is shown on the public site** when
   filled in.
-- **Tid** is typed as text in strict 24-hour form (`19:00`, never AM/PM – the
-  native time picker was dropped because it follows the browser's locale and
-  shows AM/PM on an en-US machine). `9:05` is tidied to `09:05` when the field
-  loses focus; a value the API cannot parse is refused with Swedish copy.
+- **Tid** uses the native **clock picker** (`type="time"`). Its value is always
+  strict 24-hour `HH:MM` whatever the browser displays, and the picker refuses
+  invalid clock times; typing four digits also works, so `1930` lands on `19:30`.
+  `normalizeGigTime` (data/gigs.ts) is the safety net on blur and on load, so
+  legacy values (`9:05`, `19:00:00`, `930`) are tidied as well. Nothing is ever
+  rendered as AM/PM, there is no timezone conversion and no seconds: date and time
+  stay plain strings (`YYYY-MM-DD` and `HH:MM`). A value the API cannot parse is
+  refused with Swedish copy (`time_invalid`).
 - **Info** is a multi-line field: the line breaks are kept and rendered as rows
   on the landing page.
 - **Interna anteckningar** are for the band only. They are stored and shown in
@@ -197,13 +214,16 @@ separate save is needed for the file.
   public `GET /api/gigs` never selects the column, so they cannot appear on the
   site.
 - **Publicerad** (`is_published`) is ticked by default and decides whether the
-  date may appear under "Kommande spelningar". Unticking it (or using **Skapa som
-  utkast** in the "Ny spelning" modal) makes the date a **draft**: it stays in this
-  list with an **Utkast** badge, but the public `GET /api/gigs` filters it out
-  even on the day of the event.
+  date may appear under "Kommande spelningar". Unticking it in the row editor makes
+  the date a **draft**: it stays in this list with an **Utkast** badge, but the
+  public `GET /api/gigs` filters it out even on the day of the event. As with songs,
+  visibility is an editing concern – the "Ny spelning" modal always creates a
+  published date and carries no visibility control.
 - Existing dates are an accordion: one row is open at a time, and the collapsed
-  row shows the Swedish date (e.g. `sön 4 okt. 2026`), the time, the title, the
-  venue and whether it has passed.
+  row shows the date as **`ÅÅÅÅ-MM-DD`** (e.g. `2026-10-04`), the time, the title,
+  the venue and whether it has passed. A native date picker renders in the
+  browser's locale, so the stored ISO form is echoed as text beneath the field –
+  the same `ÅÅÅÅ-MM-DD` form the public list shows.
 - Dates from **today and later** are what the landing page shows; a gig that has
   passed stays in the list with a **Passerat** badge but is no longer public.
 - A venue is required and a ticket link must be an `http(s)` URL, otherwise the

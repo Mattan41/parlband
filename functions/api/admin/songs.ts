@@ -1,3 +1,5 @@
+import { isValidPdfFileName, pdfExistsInCdn } from "./sheet-music-rules";
+
 /** Song id slug: lowercase ASCII words separated by single hyphens. */
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -75,8 +77,27 @@ function nullableText(value: unknown): string | null | undefined {
   return trimmed === "" ? null : trimmed;
 }
 
-function badRequest(error: string): Response {
-  return Response.json({ error }, { status: 400 });
+function badRequest(error: string, code?: string): Response {
+  return Response.json(code ? { error, code } : { error }, { status: 400 });
+}
+
+/**
+ * Validate a manual sheet_music_path and confirm the PDF exists in R2. Only
+ * called when the path is new or changed, so a legacy row whose document lives
+ * at an unusual key can still be edited without touching the file. Returns a
+ * ready error response, or null.
+ */
+async function checkSheetMusicPath(
+  cdn: Env["CDN"],
+  path: string
+): Promise<Response | null> {
+  if (!isValidPdfFileName(path)) {
+    return badRequest("Invalid sheet_music_path", "pdf_invalid");
+  }
+  if (!(await pdfExistsInCdn(cdn, path))) {
+    return badRequest("PDF file not found in R2", "pdf_missing");
+  }
+  return null;
 }
 
 /**
@@ -194,6 +215,17 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       );
     }
 
+    // The manual path is the only file reference in the app without a check, so
+    // a new song must not be created pointing at a missing PDF. An empty path is
+    // fine (the document is uploaded later).
+    if (sheetMusicPath !== null) {
+      const pdfProblem = await checkSheetMusicPath(
+        context.env.CDN,
+        sheetMusicPath
+      );
+      if (pdfProblem) return pdfProblem;
+    }
+
     await context.env.DB.prepare(
       `INSERT INTO songs (id, title, artist, lyrics_by, music_by, lyrics, sheet_music_path, is_published)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
@@ -256,6 +288,26 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   }
 
   try {
+    const current = await context.env.DB.prepare(
+      `SELECT sheet_music_path FROM songs WHERE id = ?`
+    )
+      .bind(id)
+      .first<{ sheet_music_path: string | null }>();
+    if (!current) {
+      return Response.json({ error: "Song not found" }, { status: 404 });
+    }
+
+    // Only re-check R2 when the path actually changes, so an old row with an
+    // unusual legacy document key can still be saved without touching the file.
+    // Clearing the path never needs a check.
+    if (sheetMusicPath !== current.sheet_music_path) {
+      const pdfProblem =
+        sheetMusicPath === null
+          ? null
+          : await checkSheetMusicPath(context.env.CDN, sheetMusicPath);
+      if (pdfProblem) return pdfProblem;
+    }
+
     const updateResult = await context.env.DB.prepare(
       `UPDATE songs
        SET title = ?, artist = ?, lyrics_by = ?, music_by = ?, lyrics = ?, sheet_music_path = ?,

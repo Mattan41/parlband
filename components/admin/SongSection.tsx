@@ -19,6 +19,7 @@ import {
   primaryButtonClass,
   secondaryButtonClass,
 } from "./adminStyles";
+import { blockEnterSubmit } from "./adminForms";
 
 interface Props {
   song: AdminSong;
@@ -35,6 +36,23 @@ interface Props {
   onMusiciansChanged: () => Promise<void>;
   onChanged: () => Promise<void>;
   notify: (text: string, tone: "success" | "error") => void;
+}
+
+/**
+ * Swedish copy for the codes the song endpoint returns for a hand-typed sheet
+ * music path. Other failures fall back to the server message, matching the
+ * recording editor's handling of the mp3 codes.
+ */
+function describeSongSaveError(cause: unknown): string {
+  if (cause instanceof AdminApiError) {
+    if (cause.code === "pdf_invalid") {
+      return "Ogiltig notsökväg – ange ett filnamn som slutar på .pdf.";
+    }
+    if (cause.code === "pdf_missing") {
+      return "PDF-filen finns inte i R2 – ladda upp noterna i stället.";
+    }
+  }
+  return cause instanceof Error ? cause.message : "Kunde inte spara låten";
 }
 
 export default function SongSection({
@@ -70,10 +88,7 @@ export default function SongSection({
       notify(`"${draft.title}" sparades.`, "success");
       await onChanged();
     } catch (error) {
-      notify(
-        error instanceof Error ? error.message : "Kunde inte spara låten",
-        "error"
-      );
+      notify(describeSongSaveError(error), "error");
     } finally {
       setSaving(false);
     }
@@ -145,8 +160,12 @@ export default function SongSection({
               </span>
             ) : null}
           </span>
-          <span className="mt-0.5 block truncate text-xs text-zinc-500 dark:text-zinc-400">
-            {song.id} · {song.recordings.length} inspelning(ar)
+          <span
+            className="mt-0.5 block truncate text-xs text-zinc-500 dark:text-zinc-400"
+            title="Id:t används i filnamn och kan inte ändras efter att låten skapats"
+          >
+            {song.id} · id:t kan inte ändras · {song.recordings.length}{" "}
+            inspelning(ar)
             {primary?.year ? ` · ${primary.year}` : ""}
           </span>
         </span>
@@ -161,7 +180,11 @@ export default function SongSection({
         className="border-t border-zinc-200 px-4 py-4 dark:border-zinc-800"
       >
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-          <form onSubmit={handleSave} className="min-w-0">
+          <form
+            onSubmit={handleSave}
+            onKeyDown={blockEnterSubmit}
+            className="min-w-0"
+          >
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               Låtinfo
               <span className="ml-1 normal-case tracking-normal text-amber-700 dark:text-amber-400">

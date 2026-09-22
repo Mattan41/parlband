@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { formatGigDate, formatGigTime, type GigRow } from "@/data/gigs";
+import { formatGigTime, type GigRow } from "@/data/gigs";
 
 /**
  * "Kommande spelningar" – upcoming gigs on the landing page.
@@ -71,7 +71,7 @@ export default function GigList() {
                 dateTime={gig.event_date}
                 className="rounded-md bg-[#eaf0e7] px-2 py-0.5 text-sm font-semibold text-[#1e2e1a] dark:bg-[#253321] dark:text-[#d3e3cd]"
               >
-                {formatGigDate(gig.event_date)}
+                {gig.event_date}
               </time>
               {time ? (
                 <span className="text-sm text-zinc-600 dark:text-zinc-300">

@@ -60,7 +60,9 @@ settings.
   - `music_by`: Composer.
   - `lyrics`: The lyrics themselves (plain text with line breaks).
   - `sheet_music_path`: Relative path to sheet music as a PDF in R2 (optional; a
-    single document per song, uploaded from the admin UI).
+    single document per song, uploaded from the admin UI). A hand-typed path
+    (the admin's "manuell" escape hatch) is validated as a bare `.pdf` file name
+    and checked against R2 when it changes (`pdf_invalid` / `pdf_missing`).
   - `is_published`: `1` when the song may be shown on the site, `0` when it is a
     draft. **Public `GET /api/songs` only returns published songs**, and `/texter`
     reads the same endpoint, so a draft disappears from the lyrics/chords view
