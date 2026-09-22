@@ -8,7 +8,14 @@ see [UPLOADING.md](./UPLOADING.md).
 Songs carry an **amber** accent and recordings a **sky (blue)** accent, and only
 one song is expanded at a time, so it is always clear what is being edited.
 Recordings are a nested accordion under the song, and a collapsed recording row
-shows its year/album and status badges.
+shows its year/album, status badges and both counters.
+
+The admin area has its own top navigation – **Katalog** (`/admin`),
+**Spelningar** (`/admin/gigs`) and **Om oss** (`/admin/about`) – rendered on
+every admin page (`components/admin/AdminNav.tsx`). It is separate from the
+public `components/SiteNav.tsx`, which links the public pages. The public
+heading of the gig section is **Kommande spelningar**; the nav pill keeps the
+shorter **Spelningar**.
 
 ## Access
 
@@ -77,7 +84,7 @@ A song can have several recordings (e.g. studio + live).
   with unsaved input asks "Du har osparade ändringar. Stäng ändå?" first.
 - The **newly created recording is expanded automatically**.
 - Recordings are an **accordion**: only one is open per song, and a collapsed
-  row shows year, album, the Huvudinspelning/Dold badges, the play count and a
+  row shows year, album, the Huvudinspelning/Dold badges, both counters and a
   compact credits summary (e.g. `Mats: Elbas · Nova: Sång`) so the takes stay
   easy to tell apart.
 - Fields: album, studio, year, engineer, notes, mp3 path, wav path, cover path.
@@ -96,7 +103,9 @@ A song can have several recordings (e.g. studio + live).
   primary and still hidden, in which case the newest other public recording is
   served instead.
 - **Play count** is derived automatically (after 5 s of continuous playback) and is
-  never set through the UI.
+  never set through the UI. **Downloads** are counted when a visitor uses the
+  download link (`GET /api/downloads`), which redirects to the WAV; neither
+  counter can be edited by hand.
 - **Delete** removes the row and its credits, but leaves the R2 files in the
   bucket. This is intentional: storage is cheap and it avoids accidental data loss.
 
@@ -146,6 +155,65 @@ separate save is needed for the file.
   "Öppna noter ↗" above.
 - The manual "Noter (R2-sökväg, manuell)" field is still available for setting a
   path by hand.
+
+## Spelningar ("Kommande spelningar")
+
+- **Katalog | Spelningar | Om oss** in the admin nav; **Spelningar** opens
+  `/admin/gigs`, the gig calendar.
+- **+ Nytt datum** creates a date in a modal (date and venue required; title,
+  time, city, ticket link, info and internal notes are optional). A failed save
+  keeps the modal open with your input and shows the error there; closing with
+  unsaved input asks "Du har osparade ändringar. Stäng ändå?" first.
+- **Enter never saves.** Only the **Spara**/**Skapa datum** button submits; a
+  stray keypress in a field (e.g. the venue) can no longer commit a half-written
+  date. Inside the multi-line fields Enter inserts a line break, as expected.
+- **Titel** is the gig's own name (e.g. a festival) and makes a date easy to
+  recognise in the list. It is optional and **is shown on the public site** when
+  filled in.
+- **Tid** is typed as text in strict 24-hour form (`19:00`, never AM/PM – the
+  native time picker was dropped because it follows the browser's locale and
+  shows AM/PM on an en-US machine). `9:05` is tidied to `09:05` when the field
+  loses focus; a value the API cannot parse is refused with Swedish copy.
+- **Info** is a multi-line field: the line breaks are kept and rendered as rows
+  on the landing page.
+- **Interna anteckningar** are for the band only. They are stored and shown in
+  the admin (a row with a note carries a small **Anteckning** badge) but the
+  public `GET /api/gigs` never selects the column, so they cannot appear on the
+  site.
+- Existing dates are an accordion: one row is open at a time, and the collapsed
+  row shows the Swedish date (e.g. `sön 4 okt. 2026`), the time, the title, the
+  venue and whether it has passed.
+- Dates from **today and later** are what the landing page shows; a gig that has
+  passed stays in the list with a **Passerat** badge but is no longer public.
+- A venue is required and a ticket link must be an `http(s)` URL, otherwise the
+  save is refused. The API returns an English message **and** a stable code
+  (`venue_required`, `ticket_url_invalid`, …); `GigsSection` maps the code to
+  Swedish copy, so what you see in the UI is always Swedish.
+- **As long as the list is empty the landing page renders no "Kommande
+  spelningar" section at all** – there is no empty state on the public site.
+
+## Om oss
+
+- **Om oss** in the admin nav opens `/admin/about`, which edits all editable
+  public copy in one form:
+  - **Välkomsttext (startsidan)** – the line under the band members in the
+    landing-page hero (`site_content.welcome_text`). An emptied field hides the
+    line completely.
+  - **Rubrik (Om oss-sidan)** – the heading of `/about`
+    (`site_content.about_heading`). An emptied field falls back to the built-in
+    "Om oss", which is also what the nav link says.
+  - **Text (Om oss-sidan)** – the body of `/about` (`site_content.about_body`).
+- One **Spara texterna** button saves all three keys; it is disabled until
+  something actually changed.
+- The copy is rendered as plain text (line breaks are preserved, no markdown).
+  The body sits above the streaming links, which are static.
+- The page `<title>` is fixed to "Om oss – Pärlband" (the static export cannot
+  read the heading at build time) and the public nav label is hardcoded, so
+  neither changes with the heading.
+- **Visa sidan ↗** opens the public page in a new tab. Saving shows an inline
+  confirmation.
+- The public page also lives at `/about`; it is linked from the public nav, so no
+  admin change is needed for visitors to find it.
 
 ## Credits
 

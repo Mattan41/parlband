@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import AdminNav from "@/components/admin/AdminNav";
 import NewSongForm from "@/components/admin/NewSongForm";
 import NewRecordingModal from "@/components/admin/NewRecordingModal";
 import SongSection from "@/components/admin/SongSection";
 import MusicianOverview from "@/components/admin/MusicianOverview";
-import Toasts, { type AdminToast } from "@/components/admin/Toasts";
+import Toasts, { useAdminToasts } from "@/components/admin/Toasts";
 import { secondaryButtonClass } from "@/components/admin/adminStyles";
 import {
   AdminApiError,
@@ -71,8 +72,7 @@ export default function AdminPage() {
   const [openRecordingId, setOpenRecordingId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<LoadError | null>(null);
-  const [toasts, setToasts] = useState<AdminToast[]>([]);
-  const toastId = useRef(0);
+  const { toasts, notify, dismiss: dismissToast } = useAdminToasts();
 
   const applyData = useCallback((data: AdminData) => {
     setSongs(data.songs);
@@ -146,15 +146,6 @@ export default function AdminPage() {
     setMusicians(data.musicians);
   }, []);
 
-  const notify = useCallback((text: string, tone: "success" | "error") => {
-    const id = toastId.current++;
-    setToasts((current) => [...current, { id, text, tone }].slice(-3));
-  }, []);
-
-  const dismissToast = useCallback((id: number) => {
-    setToasts((current) => current.filter((toast) => toast.id !== id));
-  }, []);
-
   /** Only one song is expanded at a time. */
   const toggle = useCallback((id: string) => {
     setExpandedId((current) => (current === id ? null : id));
@@ -217,6 +208,10 @@ export default function AdminPage() {
             ← Till startsidan
           </Link>
         </header>
+
+        <div className="mb-6">
+          <AdminNav />
+        </div>
 
         <div className="mb-6">
           <NewSongForm onCreated={handleSongCreated} notify={notify} />

@@ -366,6 +366,7 @@ export default function RecordingCard({
     <>
       {headerInner}
       <span className="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">
+        {recording?.download_count ?? 0} nedladdningar ·{" "}
         {recording?.play_count ?? 0} spelningar
       </span>
       {onToggle ? (

@@ -2,7 +2,7 @@ import { isValidMp3FileName, mp3ExistsInCdn } from "./recording-rules";
 
 /** Columns returned for a single recording. */
 const RECORDING_FIELDS = `id, song_id, album, studio, year, engineer, notes,
-  mp3_path, wav_path, cover_path, play_count, is_primary, is_public`;
+  mp3_path, wav_path, cover_path, play_count, download_count, is_primary, is_public`;
 
 interface RecordingRow {
   id: number;
@@ -16,6 +16,7 @@ interface RecordingRow {
   wav_path: string | null;
   cover_path: string | null;
   play_count: number | null;
+  download_count: number | null;
   is_primary: number;
   is_public: number;
 }

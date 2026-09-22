@@ -60,6 +60,19 @@ export default function SongRow({ song }: { song: Song }) {
             </svg>
             {song.play_count ?? 0}
           </span>
+          {/* Only shown when there is something to download. */}
+          {song.downloadSrc ? (
+            <span
+              className="inline-flex items-center gap-1"
+              aria-label="Antal nedladdningar"
+            >
+              <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M7.293 11.293a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L9 8.086V2.005a1 1 0 00-2 0v6.08L5.707 6.88a1 1 0 10-1.414 1.414l3 3z" />
+                <path d="M2 14a1 1 0 100 2h12a1 1 0 100-2H2z" />
+              </svg>
+              {song.download_count ?? 0}
+            </span>
+          ) : null}
         </p>
       </div>
 
@@ -96,11 +109,12 @@ export default function SongRow({ song }: { song: Song }) {
           </svg>
         </button>
 
-        {/* download button */}
+        {/* download button – deliberately no `download` attribute:
+            GET /api/downloads redirects to R2, whose
+            `content-disposition: attachment` triggers the download */}
         {song.downloadSrc && (
           <a
             href={song.downloadSrc}
-            download
             title="Ladda ned"
             aria-label="Ladda ned"
             className={iconButtonClass}

@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import SiteNav from "@/components/SiteNav";
+import PublicShell from "@/components/PublicShell";
 import { formatSongCredits } from "@/components/songCredits";
 import {
   filterLyricLines,
@@ -31,26 +31,22 @@ function hasLyrics(song: Song): song is SongWithLyrics {
  */
 export default function TexterPage() {
   return (
-    <div className="flex flex-1 flex-col items-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex w-full max-w-2xl flex-col gap-6 px-4 pt-8 pb-32 sm:gap-10 sm:pt-16">
-        <SiteNav />
+    <PublicShell>
+      <header className="text-center">
+        <h1 className="text-4xl font-bold tracking-tight text-zinc-900 sm:text-5xl dark:text-zinc-50">
+          Texter
+        </h1>
+        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+          Låttexter och ackord.
+        </p>
+      </header>
 
-        <header className="text-center">
-          <h1 className="text-4xl font-bold tracking-tight text-zinc-900 sm:text-5xl dark:text-zinc-50">
-            Texter
-          </h1>
-          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-            Låttexter och ackord.
-          </p>
-        </header>
-
-        <Suspense
-          fallback={<p className="text-center text-zinc-500">Laddar texter…</p>}
-        >
-          <TexterView />
-        </Suspense>
-      </main>
-    </div>
+      <Suspense
+        fallback={<p className="text-center text-zinc-500">Laddar texter…</p>}
+      >
+        <TexterView />
+      </Suspense>
+    </PublicShell>
   );
 }
 

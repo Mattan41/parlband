@@ -1,32 +1,54 @@
 "use client";
 
 import Image from "next/image";
+import { CONTACT_EMAIL } from "@/data/siteLinks";
+
+interface Props {
+  /** Editable welcome line (site_content key `welcome_text`); may be empty. */
+  welcomeText: string;
+}
 
 /**
- * Landing-page hero: band name, cover image, credits, welcome card and the
- * scroll hint that anchors to the "Lyssna" section.
+ * Landing-page hero: band name, cover image, credits, a short welcome line and
+ * the scroll hint that jumps to the tracklist.
  *
- * On mobile the whole block occupies (at least) the first viewport minus the
- * main padding, and the scroll hint is pushed to the bottom with `mt-auto`, so
- * the "Lyssna" anchor stays above the fold instead of being hidden below the
- * tall image + welcome card. `svh` (small viewport height) is used instead of
- * `dvh` to avoid the layout shifting as the mobile URL bar shows/hides. From
- * `sm` up the natural height is kept (`sm:min-h-0`), so desktop does not get a
- * stretched hero with a large empty gap.
+ * The welcome line comes from GET /api/content and is edited at /admin/about;
+ * an empty value hides it entirely (no fallback text in code).
+ *
+ * The hero keeps its natural height on every breakpoint: there is deliberately
+ * no `min-h` based on `100svh` and no `mt-auto`, because the forced full-screen
+ * height used to stretch the hero and leave a large void on mobile between the
+ * band members and the welcome line. The welcome line now follows the credits
+ * with a modest gap (`mt-4 sm:mt-6`), so the top of "Kommande spelningar" /
+ * the tracklist naturally peeks above the fold.
+ *
+ * Both image caps (`max-h-[24svh]` and `sm:max-h-[45svh]`) are kept so the wide
+ * `aspect-video` frame cannot dominate the screen on its own – the hero spans
+ * the full wide container, so an uncapped image would fill a laptop viewport.
+ * `svh` (small viewport height) is used instead of `dvh` to avoid the layout
+ * shifting as the mobile URL bar shows/hides.
+ *
+ * The "Ni hittar oss även här" card lives on /about; drop
+ * `components/StreamingLinks.tsx` in here (or in app/page.tsx) to show it on the
+ * landing page again.
  */
-export default function Hero() {
+export default function Hero({ welcomeText }: Props) {
   return (
-    <header className="flex min-h-[calc(100svh-4rem)] flex-col text-center sm:min-h-0">
+    <header className="flex flex-col text-center">
       <h1 className="text-5xl font-bold tracking-tight text-zinc-900 sm:text-7xl dark:text-zinc-50">
         Pärlband
       </h1>
 
-      <div className="relative my-4 aspect-4/3 max-h-[30svh] w-full overflow-hidden rounded-2xl shadow-md sm:my-6 sm:aspect-video sm:max-h-none">
+      <div className="relative my-4 aspect-4/3 max-h-[24svh] w-full overflow-hidden rounded-2xl shadow-md sm:my-6 sm:aspect-video sm:max-h-[45svh]">
         <Image
           src={`${process.env.NEXT_PUBLIC_AUDIO_BASE_URL}/parlband/images/parlband.jpg`}
           alt="Pärlband"
           fill
-          className="object-cover"
+          /* The source is 4:3 and the frame is much wider, so `object-cover`
+             crops top and bottom. The three faces sit around 19–26% from the
+             top of the photo, which a centered crop (31–68%) cuts off, so the
+             focus is raised instead. Keep this in sync with the source photo. */
+          className="object-cover object-[50%_15%]"
           priority
         />
       </div>
@@ -43,66 +65,33 @@ export default function Hero() {
         </span>
       </h2>
 
-      <div className="mt-3 rounded-2xl border border-zinc-200/80 bg-white/70 p-3 text-left shadow-sm backdrop-blur-sm sm:mt-8 sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/50">
-        <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-          Välkommen!
-        </h3>
-        <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
-          Vi håller på att bygga upp den här sidan. Ni hittar ni oss även här:
+      {/* Welcome line + scroll hint follow the credits with a modest gap. The
+          label carries the id the tracklist section is labelled by
+          (aria-labelledby in app/page.tsx) and the whole block jumps to it, past
+          the "Kommande spelningar" section.
+
+          The welcome line is edited at /admin/about (key `welcome_text`); an
+          empty value renders nothing at all, there is no fallback text here. */}
+      <div className="mt-4 sm:mt-6">
+        {welcomeText.trim() !== "" ? (
+          <p className="mx-auto max-w-xl text-sm leading-relaxed text-zinc-600 sm:text-base dark:text-zinc-300">
+            {welcomeText}
+          </p>
+        ) : null}
+
+        <p className="mt-3 text-xs text-zinc-600 sm:text-sm dark:text-zinc-400">
+          Bokning & kontakt:{" "}
+          <a
+            href={`mailto:${CONTACT_EMAIL}`}
+            className="font-medium text-zinc-900 underline underline-offset-4 transition hover:text-black dark:text-zinc-200 dark:hover:text-white"
+          >
+            {CONTACT_EMAIL}
+          </a>
         </p>
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          <a
-            href="https://parlband.bandcamp.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-full border border-zinc-300 bg-white px-3.5 py-1.5 text-xs font-medium text-zinc-800 transition hover:border-zinc-400 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
-          >
-            Bandcamp ↗
-          </a>
-          <a
-            href="https://www.youtube.com/@P%C3%A4rlband-b2n"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-full border border-zinc-300 bg-white px-3.5 py-1.5 text-xs font-medium text-zinc-800 transition hover:border-zinc-400 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
-          >
-            YouTube ↗
-          </a>
-          <a
-            href="https://soundcloud.com/user-212532667"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-full border border-zinc-300 bg-white px-3.5 py-1.5 text-xs font-medium text-zinc-800 transition hover:border-zinc-400 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
-          >
-            SoundCloud ↗
-          </a>
-          <a
-            href="https://www.facebook.com/share/1FBmEozujF/"
-            target={"_blank"}
-            rel="noopener noreferrer"
-            className="rounded-full border border-zinc-300 bg-white px-3.5 py-1.5 text-xs font-medium text-zinc-800 transition hover:border-zinc-400 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
-          >
-            Facebook ↗
-          </a>
-        </div>
-
-        <p className="mt-5 border-t border-zinc-100 pt-4 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
-          Kontakt:{" "}
-          <a
-            href="mailto:parlbandet@gmail.com"
-            className="font-medium text-zinc-900 underline underline-offset-4 hover:text-black dark:text-zinc-200 dark:hover:text-white"
-          >
-            parlbandet@gmail.com
-          </a>
-        </p>
-      </div>
-
-      {/* pinned to the bottom of the first viewport via mt-auto */}
-      <div className="mt-auto pt-3 sm:pt-6">
         <a
-          href="#lyssna"
-          aria-label="Scrolla ner till låtarna"
-          className="flex animate-bounce justify-center text-zinc-400 transition hover:text-zinc-600 dark:text-zinc-600 dark:hover:text-zinc-400"
+          href="#songlist"
+          className="mt-4 flex flex-col items-center text-zinc-400 transition hover:text-zinc-600 sm:mt-6 dark:text-zinc-600 dark:hover:text-zinc-400"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -112,18 +101,17 @@ export default function Hero() {
             strokeWidth={2}
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="h-6 w-6"
+            className="h-6 w-6 animate-bounce"
           >
             <path d="m6 9 6 6 6-6" />
           </svg>
+          <span
+            id="listen-hint"
+            className="mt-1 text-xs font-semibold uppercase tracking-widest"
+          >
+            Lyssna
+          </span>
         </a>
-
-        <p
-          id="lyssna"
-          className="mt-1 text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500"
-        >
-          Lyssna
-        </p>
       </div>
     </header>
   );

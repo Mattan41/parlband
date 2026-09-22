@@ -20,6 +20,7 @@ interface SongRow {
   wav_path: string | null;
   cover_path: string | null;
   play_count: number | null;
+  download_count: number | null;
 }
 
 interface CreditRow {
@@ -37,7 +38,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const songsResult = await context.env.DB.prepare(
       `SELECT s.id, s.title, s.artist, s.lyrics_by, s.music_by, s.lyrics, s.sheet_music_path,
               r.id AS recording_id,
-              r.album, r.studio, r.year, r.engineer, r.mp3_path, r.wav_path, r.cover_path, r.play_count
+              r.album, r.studio, r.year, r.engineer, r.mp3_path, r.wav_path, r.cover_path,
+              r.play_count, r.download_count
        FROM songs s
        LEFT JOIN recordings r ON r.id = (
          SELECT r2.id FROM recordings r2 WHERE r2.song_id = s.id AND r2.is_public = 1

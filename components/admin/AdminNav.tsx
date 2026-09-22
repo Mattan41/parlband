@@ -3,25 +3,25 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-/** Primary site destinations shown in the shared public top navigation. */
-const NAV_LINKS = [
-  { href: "/", label: "Lyssna" },
-  { href: "/texter", label: "Texter" },
-  { href: "/about", label: "Om oss" },
+/** Admin-area destinations. */
+const ADMIN_NAV_LINKS = [
+  { href: "/admin", label: "Katalog" },
+  { href: "/admin/gigs", label: "Spelningar" },
+  { href: "/admin/about", label: "Om oss" },
 ] as const;
 
 /**
- * Small top navigation shared by the public pages (components/PublicShell.tsx)
- * so every destination is reachable from any of them. The admin area has its
- * own nav (components/admin/AdminNav.tsx). Styling reuses the pill look from
- * /about's streaming links, with the amber accent marking the active page.
+ * Navigation between the admin surfaces, rendered on every /admin page.
+ * Deliberately separate from the public components/SiteNav.tsx: the admin pages
+ * live outside the public shell and get their own chrome. Same pill look as the
+ * public nav, with the amber accent marking the active page.
  */
-export default function SiteNav() {
+export default function AdminNav() {
   const pathname = usePathname();
 
   return (
-    <nav aria-label="Huvudmeny" className="flex items-center gap-2">
-      {NAV_LINKS.map((link) => {
+    <nav aria-label="Adminmeny" className="flex items-center gap-2">
+      {ADMIN_NAV_LINKS.map((link) => {
         const active = pathname === link.href;
 
         return (

@@ -13,7 +13,10 @@ names, credits, etc.) lives in D1 and is added separately – see
   and never becomes available at https://cdn.kruskopf.org
 - WAV files must have `--content-disposition="attachment; filename=X.wav"`,
   otherwise the browser plays the file instead of downloading it
-  (the `download` attribute in HTML only works same-origin)
+  (the `download` attribute in HTML only works same-origin). The public download
+  button goes through `GET /api/downloads`, which counts the click and then
+  redirects here, so this header – not the `download` attribute – is what starts
+  the download (see [DATABASE.md](./DATABASE.md))
 - MP3 files need NO content-disposition (they are meant to be streamed in the player)
 - File names: pure ASCII, no spaces or å/ä/ö
 - The PWA service worker never caches `cdn.kruskopf.org` (`/parlband/mp3/`,

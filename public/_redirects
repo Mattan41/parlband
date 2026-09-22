@@ -1,0 +1,2 @@
+# /admin/spelningar was renamed to /admin/gigs; keep old bookmarks working.
+/admin/spelningar /admin/gigs 301

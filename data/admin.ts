@@ -17,6 +17,8 @@ export interface AdminRecording {
   wav_path: string | null;
   cover_path: string | null;
   play_count: number | null;
+  /** Number of WAV downloads, counted by GET /api/downloads. */
+  download_count: number | null;
   /** 1 when this is the recording the public API serves for the song. */
   is_primary: number;
   /** 1 when the recording is visible on the public site, 0 when hidden. */
