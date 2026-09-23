@@ -79,7 +79,7 @@ app/                 App Router routes
   icon.png           app/favicon icon, served at /icon.png (rendered from public/pwa-icon.svg)
   robots.ts          /robots.txt (static export)
   sitemap.ts         /sitemap.xml (static export)
-components/          shared UI (PublicShell, SiteNav, StreamingLinks, SongRow, StickyPlayer) + home/, about/, admin/
+components/          shared UI (PublicShell, SiteNav, StreamingLinks, SongRow, StickyPlayer, TrackSleeve) + home/, about/, admin/
 data/                API types and helpers (songs.ts, gigs.ts, content.ts, admin.ts, siteLinks.ts)
 store/               Zustand player state (playerStore.ts)
 functions/api/       Pages Functions: songs, plays, downloads, content, gigs, admin CRUD + upload
@@ -90,7 +90,7 @@ public/
   icons/             192/512 px PWA icons + maskable variant
   pwa-icon.svg       vector source for the icons
 migrations/          versioned D1 schema
-tests/               Vitest unit tests (Access JWT guard, gigs, content rules, download URL, musician overview)
+tests/               Vitest unit tests (Access JWT guard, gigs, content rules, download URL, musician overview, publication flags)
 docs/                DATABASE.md, UPLOADING.md, ADMIN.md, PWA.md
 ```
 

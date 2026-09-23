@@ -3,6 +3,10 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  /* Lets the browser draw its native controls – above all the date/calendar and
+     time/clock picker indicators in the admin – with the contrast of the active
+     scheme. Without it those indicators are near-invisible in dark mode. */
+  color-scheme: light dark;
 }
 
 @theme inline {

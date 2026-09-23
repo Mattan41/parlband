@@ -71,16 +71,18 @@ export default function Hero({ welcomeText }: Props) {
           the "Kommande spelningar" section.
 
           The welcome line is edited at /admin/about (key `welcome_text`); an
-          empty value renders nothing at all, there is no fallback text here. */}
+          empty value renders nothing at all, there is no fallback text here.
+          `whitespace-pre-line` keeps the line breaks the band typed, matching the
+          Om oss-text on /about. */}
       <div className="mt-4 sm:mt-6">
         {welcomeText.trim() !== "" ? (
-          <p className="mx-auto max-w-xl text-sm leading-relaxed text-zinc-600 sm:text-base dark:text-zinc-300">
-            {welcomeText}
+          <p className="mx-auto max-w-xl whitespace-pre-line text-sm leading-relaxed text-zinc-600 sm:text-base dark:text-zinc-300">
+            {welcomeText.trim()}
           </p>
         ) : null}
 
         <p className="mt-3 text-xs text-zinc-600 sm:text-sm dark:text-zinc-400">
-          Bokning & kontakt:{" "}
+          kontakt:{" "}
           <a
             href={`mailto:${CONTACT_EMAIL}`}
             className="font-medium text-zinc-900 underline underline-offset-4 transition hover:text-black dark:text-zinc-200 dark:hover:text-white"

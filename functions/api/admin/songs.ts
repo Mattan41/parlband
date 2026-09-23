@@ -1,3 +1,5 @@
+import { isValidPdfFileName, pdfExistsInCdn } from "./sheet-music-rules";
+
 /** Song id slug: lowercase ASCII words separated by single hyphens. */
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -9,6 +11,8 @@ interface SongRow {
   music_by: string;
   lyrics: string | null;
   sheet_music_path: string | null;
+  /** 1 when the song is visible on the public site, 0 when it is a draft. */
+  is_published: number;
 }
 
 interface RecordingRow {
@@ -73,14 +77,48 @@ function nullableText(value: unknown): string | null | undefined {
   return trimmed === "" ? null : trimmed;
 }
 
-function badRequest(error: string): Response {
-  return Response.json({ error }, { status: 400 });
+function badRequest(error: string, code?: string): Response {
+  return Response.json(code ? { error, code } : { error }, { status: 400 });
+}
+
+/**
+ * Validate a manual sheet_music_path and confirm the PDF exists in R2. Only
+ * called when the path is new or changed, so a legacy row whose document lives
+ * at an unusual key can still be edited without touching the file. Returns a
+ * ready error response, or null.
+ */
+async function checkSheetMusicPath(
+  cdn: Env["CDN"],
+  path: string
+): Promise<Response | null> {
+  if (!isValidPdfFileName(path)) {
+    return badRequest("Invalid sheet_music_path", "pdf_invalid");
+  }
+  if (!(await pdfExistsInCdn(cdn, path))) {
+    return badRequest("PDF file not found in R2", "pdf_missing");
+  }
+  return null;
+}
+
+/**
+ * Optional boolean with a fallback for missing values, mirroring
+ * functions/api/admin/recordings.ts. Returns undefined only when a value is
+ * present but has the wrong type, so a bad payload is rejected instead of
+ * silently falling back.
+ */
+function optionalBoolean(
+  value: unknown,
+  fallback: boolean
+): boolean | undefined {
+  if (value === undefined || value === null) return fallback;
+  if (typeof value !== "boolean") return undefined;
+  return value;
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   try {
     const songsResult = await context.env.DB.prepare(
-      `SELECT id, title, artist, lyrics_by, music_by, lyrics, sheet_music_path
+      `SELECT id, title, artist, lyrics_by, music_by, lyrics, sheet_music_path, is_published
        FROM songs
        ORDER BY title COLLATE NOCASE`
     ).all<SongRow>();
@@ -157,6 +195,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     return badRequest("sheet_music_path must be a string or null");
   }
 
+  // Missing means "publish", so an older client that does not send the flag
+  // keeps creating public songs. Only a wrong type is rejected.
+  const isPublished = optionalBoolean(body.is_published, true);
+  if (isPublished === undefined) {
+    return badRequest("is_published must be a boolean");
+  }
+
   try {
     const existing = await context.env.DB.prepare(
       `SELECT id FROM songs WHERE id = ?`
@@ -170,15 +215,35 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       );
     }
 
+    // The manual path is the only file reference in the app without a check, so
+    // a new song must not be created pointing at a missing PDF. An empty path is
+    // fine (the document is uploaded later).
+    if (sheetMusicPath !== null) {
+      const pdfProblem = await checkSheetMusicPath(
+        context.env.CDN,
+        sheetMusicPath
+      );
+      if (pdfProblem) return pdfProblem;
+    }
+
     await context.env.DB.prepare(
-      `INSERT INTO songs (id, title, artist, lyrics_by, music_by, lyrics, sheet_music_path)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO songs (id, title, artist, lyrics_by, music_by, lyrics, sheet_music_path, is_published)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
     )
-      .bind(id, title, artist, lyricsBy, musicBy, lyrics, sheetMusicPath)
+      .bind(
+        id,
+        title,
+        artist,
+        lyricsBy,
+        musicBy,
+        lyrics,
+        sheetMusicPath,
+        isPublished ? 1 : 0
+      )
       .run();
 
     const song = await context.env.DB.prepare(
-      `SELECT id, title, artist, lyrics_by, music_by, lyrics, sheet_music_path
+      `SELECT id, title, artist, lyrics_by, music_by, lyrics, sheet_music_path, is_published
        FROM songs WHERE id = ?`
     )
       .bind(id)
@@ -216,13 +281,49 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     return badRequest("sheet_music_path must be a string or null");
   }
 
+  // Missing means "keep it published", mirroring the POST default.
+  const isPublished = optionalBoolean(body.is_published, true);
+  if (isPublished === undefined) {
+    return badRequest("is_published must be a boolean");
+  }
+
   try {
+    const current = await context.env.DB.prepare(
+      `SELECT sheet_music_path FROM songs WHERE id = ?`
+    )
+      .bind(id)
+      .first<{ sheet_music_path: string | null }>();
+    if (!current) {
+      return Response.json({ error: "Song not found" }, { status: 404 });
+    }
+
+    // Only re-check R2 when the path actually changes, so an old row with an
+    // unusual legacy document key can still be saved without touching the file.
+    // Clearing the path never needs a check.
+    if (sheetMusicPath !== current.sheet_music_path) {
+      const pdfProblem =
+        sheetMusicPath === null
+          ? null
+          : await checkSheetMusicPath(context.env.CDN, sheetMusicPath);
+      if (pdfProblem) return pdfProblem;
+    }
+
     const updateResult = await context.env.DB.prepare(
       `UPDATE songs
-       SET title = ?, artist = ?, lyrics_by = ?, music_by = ?, lyrics = ?, sheet_music_path = ?
+       SET title = ?, artist = ?, lyrics_by = ?, music_by = ?, lyrics = ?, sheet_music_path = ?,
+           is_published = ?
        WHERE id = ?`
     )
-      .bind(title, artist, lyricsBy, musicBy, lyrics, sheetMusicPath, id)
+      .bind(
+        title,
+        artist,
+        lyricsBy,
+        musicBy,
+        lyrics,
+        sheetMusicPath,
+        isPublished ? 1 : 0,
+        id
+      )
       .run();
 
     if (!updateResult.meta.changes) {
@@ -230,7 +331,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     }
 
     const song = await context.env.DB.prepare(
-      `SELECT id, title, artist, lyrics_by, music_by, lyrics, sheet_music_path
+      `SELECT id, title, artist, lyrics_by, music_by, lyrics, sheet_music_path, is_published
        FROM songs WHERE id = ?`
     )
       .bind(id)

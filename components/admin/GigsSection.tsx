@@ -1,18 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import AdminModal from "./AdminModal";
 import GigFields, {
-  blockEnterSubmit,
   emptyGigDraft,
   gigDraftEquals,
   toGigDraft,
   toGigPayload,
   type GigDraft,
 } from "./GigFields";
+import { blockEnterSubmit } from "./adminForms";
 import { adminJson, AdminApiError } from "@/data/admin";
 import {
-  formatGigDate,
   formatGigTime,
   isPastGig,
   todayIsoDate,
@@ -65,6 +64,7 @@ const GIG_ERROR_MESSAGES: Record<string, string> = {
   ticket_url_invalid: "Biljettlänken måste vara en fullständig http(s)-adress.",
   info_type: "Info måste vara en text.",
   internal_notes_type: "Anteckningarna måste vara en text.",
+  published_type: "Publicerad måste vara ja eller nej.",
   gig_not_found: "Datumet finns inte längre – ladda om sidan.",
 };
 
@@ -108,7 +108,7 @@ export default function GigsSection({ gigs, onChanged, notify }: SectionProps) {
           className={secondaryButtonClass}
           onClick={() => setCreating(true)}
         >
-          + Nytt datum
+          + Ny spelning
         </button>
       </div>
 
@@ -199,7 +199,7 @@ function GigRowEditor({
 
   async function handleDelete() {
     const confirmed = window.confirm(
-      `Ta bort ${formatGigDate(gig.event_date)} – ${gig.venue}?`
+      `Ta bort ${gig.event_date} – ${gig.venue}?`
     );
     if (!confirmed) return;
 
@@ -228,7 +228,7 @@ function GigRowEditor({
       >
         <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-            {formatGigDate(gig.event_date)}
+            {gig.event_date}
           </span>
           {time ? (
             <span className="text-xs text-zinc-600 dark:text-zinc-300">
@@ -247,6 +247,11 @@ function GigRowEditor({
           {past ? (
             <span className="rounded bg-zinc-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
               Passerat
+            </span>
+          ) : null}
+          {gig.is_published === 0 ? (
+            <span className="rounded bg-zinc-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200">
+              Utkast
             </span>
           ) : null}
           {gig.internal_notes ? (
@@ -310,6 +315,12 @@ function NewGigModal({ open, onClose, onCreated, notify }: ModalProps) {
   const [draft, setDraft] = useState<GigDraft>(emptyGigDraft);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * Set by the "Skapa som utkast" button right before the form submits. A ref
+   * (not state) because the click and the submit are separate events and the
+   * flag must be read synchronously, with no chance of a stale render.
+   */
+  const createAsDraftRef = useRef(false);
 
   const isDirty = !gigDraftEquals(draft, emptyGigDraft);
 
@@ -328,14 +339,23 @@ function NewGigModal({ open, onClose, onCreated, notify }: ModalProps) {
     event.preventDefault();
     setSaving(true);
     setError(null);
+    // Read on submit: true only when the draft button triggered this submit.
+    const asDraft = createAsDraftRef.current;
     try {
-      await adminJson("/api/admin/gigs", "POST", toGigPayload(draft));
-      notify("Datumet skapades.", "success");
+      await adminJson("/api/admin/gigs", "POST", {
+        ...toGigPayload(draft),
+        is_published: asDraft ? false : draft.is_published,
+      });
+      notify(
+        asDraft ? "Utkastet skapades." : "Spelningen skapades.",
+        "success"
+      );
+      createAsDraftRef.current = false;
       setDraft(emptyGigDraft);
       await onCreated();
     } catch (cause) {
       // The modal stays open with the entered data so it can be corrected.
-      setError(describeGigError(cause, "Kunde inte skapa datumet"));
+      setError(describeGigError(cause, "Kunde inte skapa spelningen"));
     } finally {
       setSaving(false);
     }
@@ -344,8 +364,8 @@ function NewGigModal({ open, onClose, onCreated, notify }: ModalProps) {
   return (
     <AdminModal
       open={open}
-      title="Nytt datum"
-      help="Fyll i datum och spelställe. Datum från och med idag visas under Kommande spelningar på startsidan; en tom lista renderas inte alls. Titel, tid, ort, biljettlänk och info är valfria – allt utom de interna anteckningarna kan synas på sajten. Bara Spara-knappen sparar, inte Enter."
+      title="Ny spelning"
+      help="Fyll i datum och spelställe. Datum från och med idag visas under Kommande spelningar på startsidan; en tom lista renderas inte alls. Titel, tid, ort, biljettlänk och info är valfria – allt utom de interna anteckningarna kan synas på sajten. Med Skapa som utkast sparas datumet opublicerad, och du publicerar det i efterhand med Publicerad i listan. Bara knapparna sparar, inte Enter."
       busy={saving}
       onClose={close}
     >
@@ -356,6 +376,7 @@ function NewGigModal({ open, onClose, onCreated, notify }: ModalProps) {
             setDraft((previous) => ({ ...previous, ...patch }));
             setError(null);
           }}
+          showVisibility={false}
         />
 
         {error ? (
@@ -367,13 +388,26 @@ function NewGigModal({ open, onClose, onCreated, notify }: ModalProps) {
           </p>
         ) : null}
 
-        <div className="mt-4 flex gap-2">
+        <div className="mt-4 flex flex-wrap gap-2">
           <button
             type="submit"
             className={primaryButtonClass}
             disabled={saving}
+            onClick={() => {
+              createAsDraftRef.current = false;
+            }}
           >
-            {saving ? "Sparar…" : "Skapa datum"}
+            {saving ? "Sparar…" : "Spara och publicera"}
+          </button>
+          <button
+            type="submit"
+            className={secondaryButtonClass}
+            disabled={saving}
+            onClick={() => {
+              createAsDraftRef.current = true;
+            }}
+          >
+            Skapa som utkast
           </button>
           <button
             type="button"

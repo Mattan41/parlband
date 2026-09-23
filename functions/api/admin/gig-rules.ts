@@ -55,6 +55,21 @@ export function isValidHttpUrl(value: string): boolean {
   }
 }
 
+/**
+ * Optional boolean with a fallback for missing values, mirroring
+ * functions/api/admin/recordings.ts. Returns undefined only when a value is
+ * present but has the wrong type, so a bad payload is rejected instead of
+ * silently falling back.
+ */
+function optionalBoolean(
+  value: unknown,
+  fallback: boolean
+): boolean | undefined {
+  if (value === undefined || value === null) return fallback;
+  if (typeof value !== "boolean") return undefined;
+  return value;
+}
+
 /** Validated gig payload in the shape the SQL statements bind. */
 export interface GigFields {
   eventDate: string;
@@ -65,6 +80,8 @@ export interface GigFields {
   ticketUrl: string | null;
   info: string | null;
   internalNotes: string | null;
+  /** Whether the gig may be shown on the public site. */
+  isPublished: boolean;
 }
 
 /**
@@ -85,7 +102,8 @@ export type GigErrorCode =
   | "ticket_url_type"
   | "ticket_url_invalid"
   | "info_type"
-  | "internal_notes_type";
+  | "internal_notes_type"
+  | "published_type";
 
 export interface GigFieldError {
   error: string;
@@ -160,6 +178,16 @@ export function parseGigFields(
     };
   }
 
+  // Missing means "publish", so an older client that does not send the flag
+  // keeps creating visible gigs. Only a wrong type is rejected.
+  const isPublished = optionalBoolean(body.is_published, true);
+  if (isPublished === undefined) {
+    return {
+      error: "is_published must be a boolean",
+      code: "published_type",
+    };
+  }
+
   return {
     fields: {
       eventDate,
@@ -170,6 +198,7 @@ export function parseGigFields(
       ticketUrl,
       info,
       internalNotes,
+      isPublished,
     },
   };
 }

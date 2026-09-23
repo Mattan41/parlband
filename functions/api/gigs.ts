@@ -54,7 +54,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const result = await context.env.DB.prepare(
       `SELECT id, event_date, start_time, title, venue, city, ticket_url, info
        FROM gigs
-       WHERE event_date >= ?
+       WHERE event_date >= ? AND is_published = 1
        ORDER BY event_date, start_time`
     )
       .bind(todayInStockholm())

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { adminJson, slugify } from "@/data/admin";
 import SongFields, {
   emptySongDraft,
@@ -14,6 +14,7 @@ import {
   secondaryButtonClass,
 } from "./adminStyles";
 import AdminModal from "./AdminModal";
+import { blockEnterSubmit } from "./adminForms";
 
 interface Props {
   /** Called with the new song id after a successful create so the parent can expand it. */
@@ -40,6 +41,12 @@ export default function NewSongForm({ onCreated, notify }: Props) {
   const [idEdited, setIdEdited] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * Set by the "Skapa som utkast" button right before the form submits. A ref
+   * (not state) because the click and the submit are separate events and the
+   * flag must be read synchronously, with no chance of a stale render.
+   */
+  const createAsDraftRef = useRef(false);
 
   const isDirty = songId !== "" || !draftEquals(draft, emptySongDraft);
 
@@ -81,13 +88,22 @@ export default function NewSongForm({ onCreated, notify }: Props) {
 
     setSaving(true);
     setError(null);
+    // Read on submit: true only when the draft button triggered this submit.
+    const asDraft = createAsDraftRef.current;
     try {
       await adminJson("/api/admin/songs", "POST", {
         id: songId,
         ...toSongPayload(draft),
+        is_published: asDraft ? false : draft.is_published,
       });
-      notify(`Låten "${draft.title}" skapades.`, "success");
+      notify(
+        asDraft
+          ? `Utkastet "${draft.title}" skapades.`
+          : `Låten "${draft.title}" skapades.`,
+        "success"
+      );
       const createdId = songId;
+      createAsDraftRef.current = false;
       reset();
       setOpen(false);
       await onCreated(createdId);
@@ -110,11 +126,12 @@ export default function NewSongForm({ onCreated, notify }: Props) {
       <AdminModal
         open={open}
         title="Ny låt"
-        help="Skapa en ny låt i katalogen. Fyll i titel, upphovspersoner och text – id:t (slug) föreslås från titeln och används i filnamn. Efter att låten sparats öppnas den så att du kan lägga upp noter (PDF) och lägga till inspelningar."
+        help="Skapa en ny låt. SPARA publicerar på hesmidan! id:t (slug) föreslås från titeln och används i filnamn. 
+        Efter att låten sparats (skapats eller som utkast) öppnas den så att du kan lägga upp noter (PDF), lägga till inspelningar och markera om den ska vara publicerad."
         busy={saving}
         onClose={closeModal}
       >
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} onKeyDown={blockEnterSubmit}>
           <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label>
               <span className={labelClass}>
@@ -139,6 +156,7 @@ export default function NewSongForm({ onCreated, notify }: Props) {
             draft={draft}
             onChange={updateDraft}
             idPrefix="new-song"
+            showVisibility={false}
           />
 
           {error ? (
@@ -150,13 +168,26 @@ export default function NewSongForm({ onCreated, notify }: Props) {
             </p>
           ) : null}
 
-          <div className="mt-4 flex gap-2">
+          <div className="mt-4 flex flex-wrap gap-2">
             <button
               type="submit"
               className={primaryButtonClass}
               disabled={saving}
+              onClick={() => {
+                createAsDraftRef.current = false;
+              }}
             >
               {saving ? "Sparar…" : "Skapa låt"}
+            </button>
+            <button
+              type="submit"
+              className={secondaryButtonClass}
+              disabled={saving}
+              onClick={() => {
+                createAsDraftRef.current = true;
+              }}
+            >
+              Skapa som utkast
             </button>
             <button
               type="button"

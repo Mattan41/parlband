@@ -13,6 +13,7 @@ import {
   type AdminUploadKind,
 } from "@/data/admin";
 import CreditsEditor from "./CreditsEditor";
+import { blockEnterSubmit } from "./adminForms";
 import {
   dangerButtonClass,
   inputClass,
@@ -402,20 +403,7 @@ export default function RecordingCard({
       <div hidden={!expanded} className="p-3">
         {/* Only the recording fields/actions: the credits editor below is its
             own form and must NOT be nested (nested forms break submission). */}
-        <form onSubmit={handleSave}>
-          {feedback ? (
-            <p
-              role={feedback.tone === "error" ? "alert" : "status"}
-              className={`mb-3 rounded-md border px-3 py-2 text-xs ${
-                feedback.tone === "error"
-                  ? "border-red-300 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
-                  : "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300"
-              }`}
-            >
-              {feedback.text}
-            </p>
-          ) : null}
-
+        <form onSubmit={handleSave} onKeyDown={blockEnterSubmit}>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label>
               <span className={labelClass}>Album</span>
@@ -581,6 +569,22 @@ export default function RecordingCard({
               </a>
             ) : null}
           </div>
+
+          {/* Feedback sits next to the actions instead of at the top of the card:
+              the upload buttons and Spara/Ta bort are what produce it, and on a
+              phone a message at the top of a tall card is scrolled out of view. */}
+          {feedback ? (
+            <p
+              role={feedback.tone === "error" ? "alert" : "status"}
+              className={`mt-3 rounded-md border px-3 py-2 text-xs ${
+                feedback.tone === "error"
+                  ? "border-red-300 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
+                  : "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300"
+              }`}
+            >
+              {feedback.text}
+            </p>
+          ) : null}
 
           <div className="mt-3 flex flex-wrap gap-2">
             <button

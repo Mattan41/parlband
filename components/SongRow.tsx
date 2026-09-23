@@ -49,31 +49,14 @@ export default function SongRow({ song }: { song: Song }) {
         <p className="truncate text-sm text-zinc-600 dark:text-zinc-400">
           {formatSongCredits(song)}
         </p>
-        <p className="mt-1 flex items-center gap-3 text-xs text-zinc-500 dark:text-zinc-400">
-          {song.year ? <span>{song.year}</span> : null}
-          <span
-            className="inline-flex items-center gap-1"
-            aria-label="Antal spelningar"
-          >
-            <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 16 16">
-              <polygon points="4,2 14,8 4,14" />
-            </svg>
-            {song.play_count ?? 0}
-          </span>
-          {/* Only shown when there is something to download. */}
-          {song.downloadSrc ? (
-            <span
-              className="inline-flex items-center gap-1"
-              aria-label="Antal nedladdningar"
-            >
-              <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 16 16">
-                <path d="M7.293 11.293a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L9 8.086V2.005a1 1 0 00-2 0v6.08L5.707 6.88a1 1 0 10-1.414 1.414l3 3z" />
-                <path d="M2 14a1 1 0 100 2h12a1 1 0 100-2H2z" />
-              </svg>
-              {song.download_count ?? 0}
-            </span>
-          ) : null}
-        </p>
+        {/* Play/download counts are admin-only now, so the public row shows just
+            the year. The download button below still routes through
+            GET /api/downloads, so downloads keep being counted server-side. */}
+        {song.year ? (
+          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+            {song.year}
+          </p>
+        ) : null}
       </div>
 
       {/* actions */}
