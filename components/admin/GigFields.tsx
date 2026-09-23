@@ -3,11 +3,7 @@
 import { useRef, useState } from "react";
 import { normalizeGigTime, type AdminGigRow } from "@/data/gigs";
 import TimePickerPopover from "./TimePickerPopover";
-import {
-  inputClass,
-  labelClass,
-  secondaryButtonClass,
-} from "./adminStyles";
+import { inputClass, labelClass, secondaryButtonClass } from "./adminStyles";
 
 /** Editable gig fields, shared by the "new date" modal and the inline editor. */
 export interface GigDraft {
@@ -257,8 +253,8 @@ export default function GigFields({
           ) : null}
         </div>
         <span className="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">
-          Skriv tiden i 24-timmarsformat, t.ex. 19:00. Fyra siffror går också bra
-          (1930).
+          Skriv tiden i 24-timmarsformat, t.ex. 19:00. Fyra siffror går också
+          bra (1900).
         </span>
       </label>
 

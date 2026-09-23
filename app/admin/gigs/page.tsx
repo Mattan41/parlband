@@ -71,9 +71,11 @@ export default function AdminGigsPage() {
           </div>
           <Link
             href="/"
+            target="_blank"
+            rel="noopener noreferrer"
             className="text-sm text-amber-700 underline underline-offset-4 dark:text-amber-400"
           >
-            ← Till startsidan
+            Öppna startsida i ny flik ↗
           </Link>
         </header>
 

@@ -44,6 +44,13 @@ export default function TrackSleeve({ song, onClose }: Props) {
     song.engineer ? { label: "Tekniker", value: song.engineer } : null,
   ].filter((row): row is { label: string; value: string } => row !== null);
 
+  /**
+   * Only offered when the song actually has lyrics: `/texter` lists nothing else,
+   * so for a song without text the link would open a page that does not contain it.
+   */
+  const hasLyrics =
+    typeof song.lyrics === "string" && song.lyrics.trim() !== "";
+
   return (
     <div className="max-h-72 overflow-y-auto border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950">
       <div className="mx-auto w-full max-w-2xl px-4 py-4">
@@ -118,27 +125,29 @@ export default function TrackSleeve({ song, onClose }: Props) {
               </div>
             ) : null}
 
-            <Link
-              href={`/texter?song=${encodeURIComponent(song.id)}`}
-              onClick={(event) => {
-                // Only fold the sleeve for a plain left click. With a modifier
-                // (or a middle click) the lyric page opens in a new tab, so the
-                // current tab should keep whatever it was showing.
-                if (
-                  event.metaKey ||
-                  event.ctrlKey ||
-                  event.shiftKey ||
-                  event.altKey ||
-                  event.button !== 0
-                ) {
-                  return;
-                }
-                onClose();
-              }}
-              className="inline-block text-xs font-medium text-amber-700 underline underline-offset-4 dark:text-amber-400"
-            >
-              Visa text
-            </Link>
+            {hasLyrics ? (
+              <Link
+                href={`/texter?song=${encodeURIComponent(song.id)}`}
+                onClick={(event) => {
+                  // Only fold the sleeve for a plain left click. With a modifier
+                  // (or a middle click) the lyric page opens in a new tab, so the
+                  // current tab should keep whatever it was showing.
+                  if (
+                    event.metaKey ||
+                    event.ctrlKey ||
+                    event.shiftKey ||
+                    event.altKey ||
+                    event.button !== 0
+                  ) {
+                    return;
+                  }
+                  onClose();
+                }}
+                className="inline-block text-xs font-medium text-amber-700 underline underline-offset-4 dark:text-amber-400"
+              >
+                Visa text
+              </Link>
+            ) : null}
           </div>
         </div>
       </div>
