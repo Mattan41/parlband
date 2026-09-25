@@ -12,3 +12,12 @@ export const iconButtonClass =
 /** Extra styles for buttons that can be disabled (e.g. skip-next with an empty queue). */
 export const iconButtonDisabledClass =
   "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100 disabled:hover:bg-zinc-200 dark:disabled:hover:bg-zinc-700";
+
+/**
+ * Momentary confirmation state for an icon button (e.g. "Lägg till i spellista"
+ * after a tap). Self-contained on purpose – it never reuses `iconButtonClass`,
+ * so the amber background cannot fight the base `bg-zinc-200` over Tailwind's
+ * emitted utility order. Matches the amber accent used across the app.
+ */
+export const iconButtonActiveClass =
+  "inline-flex h-8 w-8 items-center justify-center rounded-full bg-amber-500 text-white scale-110 transition hover:scale-110 hover:bg-amber-500 active:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:bg-amber-500 dark:hover:bg-amber-500 dark:focus-visible:ring-offset-zinc-900";

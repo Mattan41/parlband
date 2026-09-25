@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { usePlayerStore } from "@/store/playerStore";
+import { nextCatalogSong, usePlayerStore } from "@/store/playerStore";
 import { iconButtonClass, iconButtonDisabledClass } from "./iconButton";
+import PlayingIndicator from "./PlayingIndicator";
 import TrackSleeve from "./TrackSleeve";
 
 /**
@@ -18,6 +19,24 @@ const PLAY_THRESHOLD_MS = 5000;
  * the bar or on the sleeve itself does.
  */
 const PLAYER_CONTROL_SELECTOR = "button, input, a, [data-player-time]";
+
+/**
+ * Elements that legitimately consume the Spacebar themselves. When the keydown
+ * target is one of these – or sits inside an open modal dialog – the global
+ * play/pause shortcut stands down so typing and dialog interaction keep working.
+ * Focused buttons/links are deliberately NOT listed: Space there should still
+ * toggle playback, and `preventDefault` stops the browser from re-activating the
+ * focused control (e.g. "Spela nästa" right after it was clicked).
+ */
+const SPACE_SHORTCUT_IGNORE_SELECTOR = [
+  "input",
+  "textarea",
+  "select",
+  "[contenteditable]:not([contenteditable='false'])",
+  "[role='dialog']",
+  "[aria-modal='true']",
+  "dialog[open]",
+].join(", ");
 
 /**
  * Fixed bottom player that owns the single <audio> element for the whole app.
@@ -40,6 +59,7 @@ export default function StickyPlayer() {
 
   const currentSong = usePlayerStore((state) => state.currentSong);
   const queue = usePlayerStore((state) => state.queue);
+  const catalog = usePlayerStore((state) => state.catalog);
   const isPlaying = usePlayerStore((state) => state.isPlaying);
   const playbackId = usePlayerStore((state) => state.playbackId);
   const togglePlay = usePlayerStore((state) => state.togglePlay);
@@ -101,7 +121,13 @@ export default function StickyPlayer() {
       // Replaying a finished track is a new listening.
       hasCountedRef.current = false;
       const state = usePlayerStore.getState();
-      if (state.queue.length > 0) {
+      // With a queued track, or another song in the catalog to fall back on,
+      // keep playing. `playNext` owns both paths (queue first, then the catalog
+      // in a loop). Only a track that has nowhere to go stops the player.
+      if (
+        state.queue.length > 0 ||
+        nextCatalogSong(state.catalog, state.currentSong) !== null
+      ) {
         state.playNext();
       } else {
         state.setIsPlaying(false);
@@ -123,6 +149,39 @@ export default function StickyPlayer() {
       audio.removeEventListener("ended", handleEnded);
     };
   }, []);
+
+  // -------- global Spacebar play/pause shortcut ----------
+  // A single app-wide shortcut: Space toggles playback from anywhere on the
+  // page, as long as the visitor is not typing or working inside a dialog. The
+  // handler reads `currentSong` from the store at press time, so the listener
+  // itself never needs to be re-attached as tracks change.
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.code !== "Space" || event.repeat || event.defaultPrevented) {
+        return;
+      }
+
+      const target = event.target;
+      if (
+        target instanceof Element &&
+        target.closest(SPACE_SHORTCUT_IGNORE_SELECTOR)
+      ) {
+        return;
+      }
+
+      // With nothing loaded the bar is hidden, so leave the default Space
+      // behaviour (page scrolling) untouched.
+      if (!usePlayerStore.getState().currentSong) return;
+
+      // Stop the page from scrolling and the focused control (e.g. the last
+      // clicked transport button) from firing again.
+      event.preventDefault();
+      togglePlay();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [togglePlay]);
 
   // -------- count a play after PLAY_THRESHOLD_MS of continuous playback ----------
   useEffect(() => {
@@ -236,7 +295,7 @@ export default function StickyPlayer() {
   const skipButton = (
     <button
       onClick={playNext}
-      disabled={queue.length === 0}
+      disabled={queue.length === 0 && catalog.length <= 1}
       title="Spela nästa"
       aria-label="Spela nästa"
       className={`${iconButtonClass} ${iconButtonDisabledClass} sm:order-3 h-12! w-12! shrink-0`}
@@ -295,41 +354,74 @@ export default function StickyPlayer() {
           outer wrapper is click-through, so only the panel itself takes pointer
           events and the page underneath stays reachable right up to its edge.
           The near-opaque background plus the crisp border and the deep shadow
-          are what keep it readable on top of the song cards behind it. */}
-      {queueOpen && queue.length > 0 ? (
+          are what keep it readable on top of the song cards behind it.
+          It opens whenever a track is loaded, even with an empty queue, so the
+          "Spelas nu" section is always reachable from the queue button. */}
+      {queueOpen && currentSong ? (
         <div className="pointer-events-none absolute inset-x-0 bottom-full px-4 pb-3">
           <div className="pointer-events-auto mx-auto w-full max-w-2xl overflow-hidden rounded-2xl border border-zinc-300 bg-white/98 shadow-2xl backdrop-blur-md dark:border-zinc-700 dark:bg-zinc-800/98">
-            <ul className="max-h-[min(60vh,20rem)] overflow-y-auto p-2">
-              {queue.map((queued, index) => (
-                <li
-                  key={`${queued.recording_id ?? queued.id}-${index}`}
-                  className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                >
-                  <span className="min-w-0 flex-1 truncate text-zinc-700 dark:text-zinc-200">
-                    {queued.title}
-                  </span>
-                  <span className="hidden text-xs text-zinc-500 sm:inline dark:text-zinc-400">
-                    {queued.artist}
-                  </span>
-                  <button
-                    onClick={() => removeFromQueue(index)}
-                    title="Ta bort från spellistan"
-                    aria-label={`Ta bort ${queued.title} från spellistan`}
-                    className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-zinc-500 transition hover:scale-105 hover:bg-zinc-200 hover:text-zinc-900 active:scale-95 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-100"
-                  >
-                    <svg
-                      className="h-3.5 w-3.5"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                      viewBox="0 0 16 16"
+            {/* Now playing: the track loaded right now, independent of the
+                manual queue, so the panel always has something meaningful to
+                show. The amber title plus the pulsing dot mirror the active
+                row's highlight in the song list. */}
+            <div className="flex items-center gap-3 px-3 py-3">
+              <PlayingIndicator isPlaying={isPlaying} />
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                  Spelas nu
+                </p>
+                <p className="truncate text-sm font-semibold text-amber-600 dark:text-amber-400">
+                  {currentSong.title}
+                </p>
+              </div>
+              <span className="hidden shrink-0 text-xs text-zinc-500 sm:inline dark:text-zinc-400">
+                {currentSong.artist}
+              </span>
+            </div>
+
+            {/* Queued tracks, or a note explaining the catalog loop. */}
+            <div className="border-t border-zinc-200 dark:border-zinc-700">
+              <p className="px-3 pt-3 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                Kommande (Kön)
+              </p>
+              {queue.length > 0 ? (
+                <ul className="max-h-[min(60vh,20rem)] overflow-y-auto p-2">
+                  {queue.map((queued, index) => (
+                    <li
+                      key={`${queued.recording_id ?? queued.id}-${index}`}
+                      className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition hover:bg-zinc-100 dark:hover:bg-zinc-800"
                     >
-                      <path d="M4 4l8 8M12 4l-8 8" strokeLinecap="round" />
-                    </svg>
-                  </button>
-                </li>
-              ))}
-            </ul>
+                      <span className="min-w-0 flex-1 truncate text-zinc-700 dark:text-zinc-200">
+                        {queued.title}
+                      </span>
+                      <span className="hidden text-xs text-zinc-500 sm:inline dark:text-zinc-400">
+                        {queued.artist}
+                      </span>
+                      <button
+                        onClick={() => removeFromQueue(index)}
+                        title="Ta bort från spellistan"
+                        aria-label={`Ta bort ${queued.title} från spellistan`}
+                        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-zinc-500 transition hover:scale-105 hover:bg-zinc-200 hover:text-zinc-900 active:scale-95 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-100"
+                      >
+                        <svg
+                          className="h-3.5 w-3.5"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                          viewBox="0 0 16 16"
+                        >
+                          <path d="M4 4l8 8M12 4l-8 8" strokeLinecap="round" />
+                        </svg>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="px-3 pb-3 pt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                  Resten av låtlistan spelas i slinga
+                </p>
+              )}
+            </div>
           </div>
         </div>
       ) : null}
