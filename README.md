@@ -79,7 +79,8 @@ app/                 App Router routes
   icon.png           app/favicon icon, served at /icon.png (rendered from public/pwa-icon.svg)
   robots.ts          /robots.txt (static export)
   sitemap.ts         /sitemap.xml (static export)
-components/          shared UI (PublicShell, SiteNav, StreamingLinks, SongRow, StickyPlayer, TrackSleeve) + home/, about/, admin/
+components/          shared UI (PublicShell, SiteNav, StreamingLinks, SongRow, StickyPlayer, TrackSleeve,
+                     ServiceWorkerRegistrar, iconButton.ts, songCredits.ts) + home/, about/, texter/, admin/
 data/                API types and helpers (songs.ts, gigs.ts, content.ts, admin.ts, siteLinks.ts)
 store/               Zustand player state (playerStore.ts)
 functions/api/       Pages Functions: songs, plays, downloads, content, gigs, admin CRUD + upload
@@ -90,8 +91,9 @@ public/
   icons/             192/512 px PWA icons + maskable variant
   pwa-icon.svg       vector source for the icons
 migrations/          versioned D1 schema
-tests/               Vitest unit tests (Access JWT guard, gigs, content rules, download URL, musician overview, publication flags)
-docs/                DATABASE.md, UPLOADING.md, ADMIN.md, PWA.md
+tests/               Vitest unit tests (Access JWT guard, gigs, content rules, download URL,
+                     musician overview, publication flags, mp3/sheet-music upload rules)
+docs/                DATABASE.md, UPLOADING.md, ADMIN.md, PWA.md, PLAYER.md
 ```
 
 ## Routes
@@ -119,8 +121,9 @@ handled by `components/ServiceWorkerRegistrar.tsx` (production only).
   (`cdn.kruskopf.org`, `/parlband/mp3/`, `/parlband/wav/`, cover images), so
   replaced audio is never served stale.
 
-See [docs/PWA.md](docs/PWA.md) for the file map, the local testing checklist and
-how to re-render the icons.
+See [docs/PWA.md](docs/PWA.md) for the file map, the local testing checklist, how
+to re-render the icons, and how to clear stale state (an old `out/`, the service
+worker or `.next`) when a change seems to be missing while verifying a UI tweak.
 
 ## Environment
 
@@ -179,6 +182,7 @@ is why the example repeats `NEXT_PUBLIC_AUDIO_BASE_URL`.
 - [docs/UPLOADING.md](docs/UPLOADING.md) – R2 file conventions, CLI uploads, Access
 - [docs/ADMIN.md](docs/ADMIN.md) – what you can do in the admin UI
 - [docs/PWA.md](docs/PWA.md) – manifest, service worker, install/offline testing
+- [docs/PLAYER.md](docs/PLAYER.md) – the sticky player: state, playback and UI rules
 
 ## Deployment
 

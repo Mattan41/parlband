@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import type { Song } from "@/data/songs";
 import { usePlayerStore } from "@/store/playerStore";
@@ -17,6 +18,12 @@ export default function SongRow({ song }: { song: Song }) {
   const isActive = usePlayerStore(
     (state) => state.currentSong?.recording_id === song.recording_id
   );
+  /**
+   * The row shows the recording's own cover only. A URL that fails to load
+   * (for example a cover that exists in the local dev R2 but not on the
+   * deployed CDN) simply drops the thumbnail instead of showing a broken image.
+   */
+  const [coverFailed, setCoverFailed] = useState(false);
 
   return (
     <div
@@ -26,11 +33,12 @@ export default function SongRow({ song }: { song: Song }) {
           : "border-transparent bg-white dark:bg-zinc-900"
       }`}
     >
-      {/* cover image (only if a cover URL is provided) */}
-      {song.cover ? (
+      {/* cover image (only if a cover URL is provided and it loads) */}
+      {song.cover && !coverFailed ? (
         <Image
           src={song.cover}
           alt={song.title}
+          onError={() => setCoverFailed(true)}
           className="h-16 w-16 rounded-lg object-cover"
         />
       ) : null}

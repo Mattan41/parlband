@@ -10,7 +10,7 @@ code.
 D1 (parlband-db)
   └─ functions/api/songs.ts   GET /api/songs   (raw rows + nested credits)
        └─ data/songs.ts       toSong(): row → Song + helper URLs
-            └─ app/page.tsx   fetches /api/songs on mount → <SongRow> list
+            └─ app/page.tsx   fetches /api/songs on mount → <SongList> (<SongRow> per song)
                  └─ store/playerStore.ts  global playback state (Zustand)
                       └─ components/StickyPlayer.tsx  single <audio> element
                            └─ functions/api/plays.ts  POST /api/plays
@@ -246,7 +246,8 @@ Conventions:
   seconds of **continuous** playback. Pausing cancels the timer, switching
   tracks before 5 s does not count, and the same listening is counted only once
   (a replay after the track has finished counts as a new listening, including
-  when the same song plays again from the queue).
+  when the same song plays again from the queue). See
+  [PLAYER.md](./PLAYER.md) for the playback rules behind this.
 
 ## Downloads: GET /api/downloads
 
@@ -349,6 +350,9 @@ npm run db:reset    # reset local D1 and re-run schema + seeds.sql
 - `db:reset` deletes `.wrangler/state/v3/d1` and rebuilds the database from
   scratch. `seeds.sql` uses plain `INSERT`s and can therefore only be run once
   against an empty database.
+- If a change seems to be missing because of a stale cache (an old `out/`, the
+  service worker or `.next`), see
+  [PWA.md → Clearing stale state](./PWA.md#clearing-stale-state-when-verifying-a-change).
 
 ### Against remote (production)
 

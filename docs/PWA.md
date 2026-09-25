@@ -40,6 +40,44 @@ Registration is intentionally skipped when `NODE_ENV !== "production"`, so
 runs against a production build – test with `npm run preview`, not
 `npm run dev` / `npm run dev:d1`.
 
+## Clearing stale state when verifying a change
+
+Three different servers can show you the same source, and they do not refresh at
+the same time. If a change seems to be missing – or DevTools shows markup that
+looks like the previous version – check which one you are actually looking at:
+
+| URL / command             | What is served                                   | What can be stale                    |
+| ------------------------- | ------------------------------------------------ | ------------------------------------ |
+| `npm run dev` (:3000)     | plain `next dev`, **no `/api/songs`**            | the `.next` cache                    |
+| `npm run dev:d1` (:8788)  | fresh dev server proxied through the Functions   | `.wrangler/tmp/*` (Functions bundle) |
+| `npm run preview` (:8788) | the static `out/` from the **last `next build`** | `out/`, plus the service worker      |
+
+```bash
+npm run clean           # removes .next, dist, out and build
+rm -rf .wrangler/tmp    # forces Functions to be re-bundled (keeps local D1!)
+npm run dev:d1          # or: npm run preview, which builds first
+```
+
+Then in Chrome DevTools:
+
+- **Network** – tick _Disable cache_ (applies while DevTools is open) and reload
+  with `Ctrl/Cmd+Shift+R`, or right-click the reload button → _Empty Cache and
+  Hard Reload_.
+- **Application → Service Workers** – tick _Update on reload_ or _Unregister_.
+  The worker only runs against a production build, so this matters for `preview`
+  and deploys, never for `dev`/`dev:d1`.
+- **Application → Storage → Clear site data** – drops the `parlband-shell-*`
+  caches.
+- A private/incognito window is the quickest way to be sure nothing is cached.
+
+> **Do not** run `rm -rf .wrangler` or `npm run db:reset` "to clear the cache":
+> that deletes the local D1 database, so the song list comes up empty and looks
+> like a bug. `db:reset` is only for rebuilding the database from `seeds.sql`.
+
+After an HMR update React can briefly leave detached or duplicated nodes in the
+tree (for example an old `fixed` player bar). Do a full reload before judging
+whether the markup is really wrong.
+
 ## Testing locally
 
 `localhost` is treated as a secure context, so service workers and the install
@@ -107,3 +145,4 @@ safe radius of 204.8 px (80% of the icon). No extra padding is required.
 - [DATABASE.md](./DATABASE.md) – data flow, CDN URLs and why they are not cached
 - [UPLOADING.md](./UPLOADING.md) – R2 file conventions and uploads
 - [ADMIN.md](./ADMIN.md) – what you can do in the admin UI
+- [PLAYER.md](./PLAYER.md) – the sticky player: state, playback and UI rules

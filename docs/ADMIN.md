@@ -309,3 +309,5 @@ credits editor (and every other sub-editor) sits next to it, not inside it.
 - [DATABASE.md](./DATABASE.md) – tables, API response and data flow
 - [UPLOADING.md](./UPLOADING.md) – R2 key conventions, CLI commands, Cloudflare Access
 - [PWA.md](./PWA.md) – app install, service worker caching and offline behavior
+- [PLAYER.md](./PLAYER.md) – the public sticky player and its sleeve; note that the
+  "Låtinfo" section here in the admin UI is a different thing from the player's sleeve
