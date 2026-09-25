@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import StreamingLinks from "@/components/StreamingLinks";
 import { DEFAULT_ABOUT_HEADING, fetchSiteContent } from "@/data/content";
 
+import InstallAppCard from "./InstallAppCard";
+
 /**
  * /about – "Om oss".
  *
@@ -71,6 +73,8 @@ export default function AboutView() {
       ) : null}
 
       <StreamingLinks />
+
+      <InstallAppCard />
     </article>
   );
 }

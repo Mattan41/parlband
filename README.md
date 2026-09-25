@@ -81,6 +81,7 @@ app/                 App Router routes
   sitemap.ts         /sitemap.xml (static export)
 components/          shared UI (PublicShell, SiteNav, StreamingLinks, SongRow, StickyPlayer, TrackSleeve,
                      ServiceWorkerRegistrar, iconButton.ts, songCredits.ts) + home/, about/, texter/, admin/
+                     (about/ holds InstallAppCard.tsx + its pure installApp.ts detection helpers)
 data/                API types and helpers (songs.ts, gigs.ts, content.ts, admin.ts, siteLinks.ts)
 store/               Zustand player state (playerStore.ts)
 functions/api/       Pages Functions: songs, plays, downloads, content, gigs, admin CRUD + upload
@@ -98,14 +99,14 @@ docs/                DATABASE.md, UPLOADING.md, ADMIN.md, PWA.md, PLAYER.md
 
 ## Routes
 
-| Route          | Description                                                             |
-| -------------- | ----------------------------------------------------------------------- |
-| `/`            | Hero + Kommande spelningar (no section until a date exists) + tracklist |
-| `/texter`      | Lyrics & chords for songs that have lyrics; `?song=<id>` deep links     |
-| `/about`       | "Om oss": editable heading + text, streaming links and contact          |
-| `/admin`       | Admin/editor UI, protected by Cloudflare Access                         |
-| `/admin/gigs`  | Gig calendar editor, protected by Cloudflare Access                     |
-| `/admin/about` | Editor for the welcome text and the Om oss page, Cloudflare Access      |
+| Route          | Description                                                                   |
+| -------------- | ----------------------------------------------------------------------------- |
+| `/`            | Hero + Kommande spelningar (no section until a date exists) + tracklist       |
+| `/texter`      | Lyrics & chords for songs that have lyrics; `?song=<id>` deep links           |
+| `/about`       | "Om oss": editable heading + text, streaming links, install-app card, contact |
+| `/admin`       | Admin/editor UI, protected by Cloudflare Access                               |
+| `/admin/gigs`  | Gig calendar editor, protected by Cloudflare Access                           |
+| `/admin/about` | Editor for the welcome text and the Om oss page, Cloudflare Access            |
 
 ## PWA / installability
 

@@ -101,6 +101,19 @@ Confirm playback still works with the worker active: play a song and check that
 `cdn.kruskopf.org/parlband/mp3/...` requests are **not** handled by the service
 worker in the Network panel.
 
+## Install prompt on /about
+
+`components/about/InstallAppCard.tsx` ("Spara som app") turns the installability
+into something a visitor can act on from the Om oss page. It stays hidden when
+`window.matchMedia("(display-mode: standalone)")` matches or iOS Safari reports
+`navigator.standalone`, so it is never offered to someone who already installed
+the app. On Chromium (Android, desktop Chrome/Edge) it captures
+`beforeinstallprompt` and replays it from an "Installera app" button; on iOS it
+shows Safari's Share → _Lägg till på hemskärmen_ steps instead, since iOS never
+fires the event. The platform/standalone detection is kept in the pure
+`components/about/installApp.ts` helpers and unit-tested in
+`tests/install-app.test.ts`.
+
 Offline (tick _Offline_ in the Service Workers panel, then hard-reload) the app
 shell loads from cache, but the song list shows
 "Kunde inte ladda låtarna just nu." and playback is unavailable – `/api/songs`
