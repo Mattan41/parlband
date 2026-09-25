@@ -87,7 +87,7 @@ store/               Zustand player state (playerStore.ts)
 functions/api/       Pages Functions: songs, plays, downloads, content, gigs, admin CRUD + upload
   admin/_middleware.ts  Cloudflare Access JWT guard for /api/admin/*
 public/
-  manifest.json      PWA web app manifest
+  manifest.json      PWA web app manifest (related_applications for getInstalledRelatedApps)
   sw.js              service worker (offline app shell; never caches the R2 CDN)
   icons/             192/512 px PWA icons + maskable variant
   pwa-icon.svg       vector source for the icons

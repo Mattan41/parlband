@@ -3,9 +3,13 @@
 import { useSyncExternalStore } from "react";
 
 import {
+  canQueryInstalledApps,
   detectPlatform,
+  hasInstalledWebApp,
+  isChromiumBrowser,
   isStandalone,
   type BeforeInstallPromptEventLike,
+  type RelatedAppLike,
 } from "./installApp";
 
 /**
@@ -20,22 +24,68 @@ import {
  * hydration - so the statically exported HTML never mismatches, the browser
  * APIs are only touched on the client, and no state is set during an effect.
  *
- * - iOS Safari never fires `beforeinstallprompt`, so the two Share-sheet steps
- *   are shown directly instead of a button.
+ * - iOS Safari never fires `beforeinstallprompt`, so the Share-sheet steps are
+ *   shown directly instead of a button.
  * - Chromium (Android and desktop Chrome/Edge) fires `beforeinstallprompt`; the
- *   event is captured and replayed from the "Installera app" button.
- * - Everything else gets a short browser-menu hint.
+ *   event is captured and replayed from the "Installera app" button. Because
+ *   that event is suppressed once the app is installed, the generic browser-menu
+ *   hint is withheld on Chromium until the prompt proves it can be installed
+ *   from here (see `getSnapshot`).
+ * - Firefox and desktop Safari fall back to a short browser-menu hint.
+ *
+ * `navigator.getInstalledRelatedApps()` is queried once per page session as an
+ * authoritative check for an existing installation, so a normal browser tab on a
+ * device that already has the app stays hidden. The API is Chromium-only and
+ * experimental, which is why the Chromium hint is withheld until the prompt
+ * fires rather than trusted on its own.
  */
 type ViewState = "hidden" | "ios" | "prompt" | "instructions";
 
+/** Result of the asynchronous installation check. */
+type InstalledState = "unknown" | "installed" | "absent";
+
 /** Single-use Chromium prompt; kept outside React so it survives remounts. */
 let deferredPrompt: BeforeInstallPromptEventLike | null = null;
+
+/** Installation status from `getInstalledRelatedApps()`, queried once. */
+let installedState: InstalledState = "unknown";
+let installedCheckStarted = false;
 
 /** On-change callbacks from every mounted card (there is normally just one). */
 const listeners = new Set<() => void>();
 
 function emit() {
   for (const listener of listeners) listener();
+}
+
+/** `navigator.getInstalledRelatedApps()`, which the TS DOM lib does not declare. */
+type NavigatorWithInstalledApps = Navigator & {
+  getInstalledRelatedApps?: () => Promise<RelatedAppLike[]>;
+};
+
+/**
+ * Fire the installation query once and record the result. The API is Chromium
+ * only, so an unsupported browser simply leaves `installedState` as "unknown",
+ * and a rejection (e.g. a non-top-level browsing context) counts as "absent" so
+ * the card is not lost.
+ */
+function checkInstalledApps() {
+  if (installedCheckStarted) return;
+  installedCheckStarted = true;
+
+  const nav = navigator as NavigatorWithInstalledApps;
+  if (!canQueryInstalledApps(nav) || !nav.getInstalledRelatedApps) return;
+
+  void nav.getInstalledRelatedApps
+    .call(nav)
+    .then((apps) => {
+      installedState = hasInstalledWebApp(apps) ? "installed" : "absent";
+      emit();
+    })
+    .catch(() => {
+      installedState = "absent";
+      emit();
+    });
 }
 
 /** The server (and the hydration pass) must not guess: render nothing. */
@@ -53,15 +103,29 @@ function getSnapshot(): ViewState {
       (navigator as Navigator & { standalone?: boolean }).standalone === true,
   });
   if (standalone) return "hidden";
+
+  // An installed app is never offered the card, whichever tab it is opened in.
+  if (installedState === "installed") return "hidden";
   if (deferredPrompt) return "prompt";
 
-  return detectPlatform(navigator.userAgent, navigator.maxTouchPoints) === "ios"
-    ? "ios"
-    : "instructions";
+  // iOS never fires `beforeinstallprompt`: the Share sheet is the only way in.
+  if (detectPlatform(navigator.userAgent, navigator.maxTouchPoints) === "ios") {
+    return "ios";
+  }
+
+  // Chromium hardening: `beforeinstallprompt` is suppressed when the app is
+  // already installed, so withhold the generic browser-menu hint until the
+  // prompt proves the app can actually be installed from here. This also keeps
+  // the card hidden while the async installation check is still pending.
+  if (isChromiumBrowser(navigator.userAgent)) return "hidden";
+
+  return "instructions";
 }
 
 function subscribe(onStoreChange: () => void): () => void {
   const media = window.matchMedia("(display-mode: standalone)");
+
+  checkInstalledApps();
 
   const handleBeforeInstallPrompt = (event: Event) => {
     // Stop Chromium's own mini-infobar; the card's button owns the prompt.
@@ -71,6 +135,7 @@ function subscribe(onStoreChange: () => void): () => void {
   };
   const handleInstalled = () => {
     deferredPrompt = null;
+    installedState = "installed";
     onStoreChange();
   };
   const handleDisplayModeChange = () => onStoreChange();
