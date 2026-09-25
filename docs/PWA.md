@@ -7,14 +7,14 @@ simpler and more predictable than a plugin's caching heuristics.
 
 ## File map
 
-| Piece              | File                                                                                                        |
-| ------------------ | ----------------------------------------------------------------------------------------------------------- |
-| Web app manifest   | `public/manifest.json` – name/short_name `Pärlband`, `start_url: /`, `display: standalone`, `#18181b` theme |
-| PWA icons          | `public/icons/icon-192x192.png`, `icon-512x512.png`, `icon-maskable-512x512.png`                            |
-| Favicon / tab icon | `app/icon.png` (served at `/icon.png`, same render as the 192 px icon)                                      |
-| Icon source        | `public/pwa-icon.svg` (vector; every PNG above is rendered from it)                                         |
-| Service worker     | `public/sw.js`                                                                                              |
-| Registration       | `components/ServiceWorkerRegistrar.tsx`, mounted from `app/layout.tsx`                                      |
+| Piece              | File                                                                                                                                                 |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Web app manifest   | `public/manifest.json` – name/short_name `Pärlband`, `start_url: /`, `display: standalone`, `#18181b` theme, self-referencing `related_applications` |
+| PWA icons          | `public/icons/icon-192x192.png`, `icon-512x512.png`, `icon-maskable-512x512.png`                                                                     |
+| Favicon / tab icon | `app/icon.png` (served at `/icon.png`, same render as the 192 px icon)                                                                               |
+| Icon source        | `public/pwa-icon.svg` (vector; every PNG above is rendered from it)                                                                                  |
+| Service worker     | `public/sw.js`                                                                                                                                       |
+| Registration       | `components/ServiceWorkerRegistrar.tsx`, mounted from `app/layout.tsx`                                                                               |
 
 ## Caching rules
 
@@ -106,13 +106,44 @@ worker in the Network panel.
 `components/about/InstallAppCard.tsx` ("Spara som app") turns the installability
 into something a visitor can act on from the Om oss page. It stays hidden when
 `window.matchMedia("(display-mode: standalone)")` matches or iOS Safari reports
-`navigator.standalone`, so it is never offered to someone who already installed
-the app. On Chromium (Android, desktop Chrome/Edge) it captures
-`beforeinstallprompt` and replays it from an "Installera app" button; on iOS it
-shows Safari's Share → _Lägg till på hemskärmen_ steps instead, since iOS never
-fires the event. The platform/standalone detection is kept in the pure
-`components/about/installApp.ts` helpers and unit-tested in
+`navigator.standalone`, so it is never offered to someone who already has the app
+open as an installed app.
+
+On Chromium (Android, desktop Chrome/Edge) the card captures
+`beforeinstallprompt` and replays it from an "Installera app" button. Because
+that event is also suppressed once the app is installed – which would otherwise
+leave a plain browser tab falling through to the generic "use the browser menu"
+hint – the hint is deliberately withheld on Chromium until the prompt proves the
+app can be installed from here.
+
+`navigator.getInstalledRelatedApps()` is queried once per page session as an
+authoritative second opinion, so an already-installed device stays hidden even in
+a normal tab. For that query to see anything the manifest has to opt in:
+
+```json
+"id": "/",
+"related_applications": [
+  {
+    "platform": "webapp",
+    "id": "/",
+    "url": "https://parlband.kruskopf.org/manifest.json"
+  }
+]
+```
+
+`getInstalledRelatedApps()` is Chromium-only and experimental, which is why the
+Chromium hint is withheld rather than trusted on its own. Firefox and desktop
+Safari keep the browser-menu hint, and iOS keeps the Share → _Lägg till på
+hemskärmen_ steps (iOS never fires `beforeinstallprompt`). An unsupported browser
+or a rejected query degrades to the previous behaviour. The detection is kept in
+the pure `components/about/installApp.ts` helpers and unit-tested in
 `tests/install-app.test.ts`.
+
+To verify on a real install: install the app, then reopen
+`https://parlband.kruskopf.org/about` in a normal tab – the card must not appear.
+DevTools → **Application → Manifest** shows the parsed `related_applications`,
+and `await navigator.getInstalledRelatedApps()` in the console should list the
+`webapp` entry on a device that has it installed.
 
 Offline (tick _Offline_ in the Service Workers panel, then hard-reload) the app
 shell loads from cache, but the song list shows

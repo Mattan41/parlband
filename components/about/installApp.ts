@@ -63,3 +63,43 @@ export function detectPlatform(
 export function isStandalone(signals: StandaloneSignals): boolean {
   return signals.displayModeStandalone || signals.navigatorStandalone;
 }
+
+/** A single entry returned by `navigator.getInstalledRelatedApps()`. */
+export interface RelatedAppLike {
+  id?: string;
+  platform: string;
+  url?: string;
+  version?: string;
+}
+
+const CHROMIUM_RE = /chrome\/|chromium\/|edg[a-z]*\//i;
+
+/**
+ * True for Chromium-based browsers that can fire `beforeinstallprompt`
+ * (Chrome, Edge, Opera, Samsung Internet) – Firefox and Safari are left out.
+ */
+export function isChromiumBrowser(userAgent: string): boolean {
+  return CHROMIUM_RE.test(userAgent);
+}
+
+/**
+ * True when the browser exposes `navigator.getInstalledRelatedApps()`. The API
+ * is Chromium-only; iOS Safari and Firefox do not implement it (and the TS DOM
+ * lib does not declare it yet, hence the structural parameter type).
+ */
+export function canQueryInstalledApps(nav: {
+  getInstalledRelatedApps?: unknown;
+}): boolean {
+  return typeof nav.getInstalledRelatedApps === "function";
+}
+
+/**
+ * True when the query returned our own installed PWA. The query only ever
+ * returns apps declared in the manifest's `related_applications`, so an
+ * installed `webapp` entry means the site is already installed on the device.
+ */
+export function hasInstalledWebApp(
+  apps: ReadonlyArray<Pick<RelatedAppLike, "platform">>
+): boolean {
+  return apps.some((app) => app.platform === "webapp");
+}
