@@ -84,9 +84,7 @@ export default function SongRow({ song }: { song: Song }) {
               : "text-black dark:text-zinc-50"
           }`}
         >
-          {isActive && isPlaying ? (
-            <PlayingIndicator className="mr-2" />
-          ) : null}
+          {isActive && isPlaying ? <PlayingIndicator className="mr-2" /> : null}
           {song.title}
         </h3>
         {/* Credits are intentionally left out of the row – they are a tap away
@@ -119,7 +117,9 @@ export default function SongRow({ song }: { song: Song }) {
             action and its result are both obvious on touch devices. */}
         <button
           onClick={handleAddToQueue}
-          title={addedToQueue ? "Tillagd i spellistan" : "Lägg till i spellista"}
+          title={
+            addedToQueue ? "Tillagd i spellistan" : "Lägg till i spellista"
+          }
           aria-label={
             addedToQueue ? "Tillagd i spellistan" : "Lägg till i spellista"
           }

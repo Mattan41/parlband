@@ -7,27 +7,27 @@ owns an `<audio>` element, and the only place that talks to `POST /api/plays`.
 
 ## File map
 
-| Piece                    | File                          | Responsibility                                             |
-| ------------------------ | ----------------------------- | ---------------------------------------------------------- |
-| Bar, transport, panels   | `components/StickyPlayer.tsx` | playback, transport UI, sleeve/queue state                 |
-| Track sleeve ("Låtinfo") | `components/TrackSleeve.tsx`  | cover backdrop, credits, recording info, `/texter` link    |
-| Song row                 | `components/SongRow.tsx`      | hands a song to the store (play / add to queue / download); title + year only, with a playing dot and a queue-tap confirmation |
-| Playback state           | `store/playerStore.ts`        | `currentSong`, `queue`, `catalog`, `isPlaying`, `playbackId`, `nextCatalogSong` |
-| Now-playing indicator    | `components/PlayingIndicator.tsx` | shared animated equalizer (three amber bars) used by the row and the queue panel |
-| Round icon buttons       | `components/iconButton.ts`    | shared `iconButtonClass` / `iconButtonDisabledClass`       |
-| Credits line             | `components/songCredits.ts`   | `formatSongCredits` for the list and the sleeve            |
-| Play counting            | `functions/api/plays.ts`      | `POST /api/plays` (see [DATABASE.md](./DATABASE.md))       |
-| Download counting        | `functions/api/downloads.ts`  | `GET /api/downloads` (see [DATABASE.md](./DATABASE.md))    |
+| Piece                    | File                              | Responsibility                                                                                                                 |
+| ------------------------ | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Bar, transport, panels   | `components/StickyPlayer.tsx`     | playback, transport UI, sleeve/queue state                                                                                     |
+| Track sleeve ("Låtinfo") | `components/TrackSleeve.tsx`      | cover backdrop, credits, recording info, `/texter` link                                                                        |
+| Song row                 | `components/SongRow.tsx`          | hands a song to the store (play / add to queue / download); title + year only, with a playing dot and a queue-tap confirmation |
+| Playback state           | `store/playerStore.ts`            | `currentSong`, `queue`, `catalog`, `isPlaying`, `playbackId`, `nextCatalogSong`                                                |
+| Now-playing indicator    | `components/PlayingIndicator.tsx` | shared animated equalizer (three amber bars) used by the row and the queue panel                                               |
+| Round icon buttons       | `components/iconButton.ts`        | shared `iconButtonClass` / `iconButtonDisabledClass`                                                                           |
+| Credits line             | `components/songCredits.ts`       | `formatSongCredits` for the list and the sleeve                                                                                |
+| Play counting            | `functions/api/plays.ts`          | `POST /api/plays` (see [DATABASE.md](./DATABASE.md))                                                                           |
+| Download counting        | `functions/api/downloads.ts`      | `GET /api/downloads` (see [DATABASE.md](./DATABASE.md))                                                                        |
 
 ## State ownership
 
 The state is split on purpose:
 
-| State                                             | Lives in                   | Why                                                                                                              |
-| ------------------------------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| State                                                        | Lives in                   | Why                                                                                                              |
+| ------------------------------------------------------------ | -------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | `currentSong`, `queue`, `catalog`, `isPlaying`, `playbackId` | Zustand (`playerStore`)    | the song list must know which row is active and must be able to queue a song; the bar must be reachable anywhere |
-| `currentTime`, `duration`                         | `StickyPlayer` local state | `timeupdate` fires several times per second; keeping it out of the store avoids re-rendering the whole song list |
-| `queueOpen`, `sleeveOpen`                         | `StickyPlayer` local state | pure UI state                                                                                                    |
+| `currentTime`, `duration`                                    | `StickyPlayer` local state | `timeupdate` fires several times per second; keeping it out of the store avoids re-rendering the whole song list |
+| `queueOpen`, `sleeveOpen`                                    | `StickyPlayer` local state | pure UI state                                                                                                    |
 
 **Invariant:** no playback state lives in the panel state. Opening or closing the
 sleeve or the queue never touches the media element, so a panel can never pause,
@@ -142,8 +142,8 @@ Two things to know before editing these classes:
     The equalizer animates only while `isPlaying`; when paused its bars rest at a
     low static height.
   - **"Kommande (Kön)"** – the queued tracks (title, artist from `sm` up, remove
-    button). When the queue is empty it shows the muted note *"Resten av
-    låtlistan spelas i slinga"* instead, explaining the catalog fallback.
+    button). When the queue is empty it shows the muted note _"Resten av
+    låtlistan spelas i slinga"_ instead, explaining the catalog fallback.
 - Opening the queue folds the sleeve and vice versa – they share the same space
   above the bar.
 
