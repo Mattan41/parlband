@@ -246,7 +246,8 @@ Conventions:
   seconds of **continuous** playback. Pausing cancels the timer, switching
   tracks before 5 s does not count, and the same listening is counted only once
   (a replay after the track has finished counts as a new listening, including
-  when the same song plays again from the queue).
+  when the same song plays again from the queue). See
+  [PLAYER.md](./PLAYER.md) for the playback rules behind this.
 
 ## Downloads: GET /api/downloads
 

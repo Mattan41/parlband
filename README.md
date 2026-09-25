@@ -93,7 +93,7 @@ public/
 migrations/          versioned D1 schema
 tests/               Vitest unit tests (Access JWT guard, gigs, content rules, download URL,
                      musician overview, publication flags, mp3/sheet-music upload rules)
-docs/                DATABASE.md, UPLOADING.md, ADMIN.md, PWA.md
+docs/                DATABASE.md, UPLOADING.md, ADMIN.md, PWA.md, PLAYER.md
 ```
 
 ## Routes
@@ -182,6 +182,7 @@ is why the example repeats `NEXT_PUBLIC_AUDIO_BASE_URL`.
 - [docs/UPLOADING.md](docs/UPLOADING.md) – R2 file conventions, CLI uploads, Access
 - [docs/ADMIN.md](docs/ADMIN.md) – what you can do in the admin UI
 - [docs/PWA.md](docs/PWA.md) – manifest, service worker, install/offline testing
+- [docs/PLAYER.md](docs/PLAYER.md) – the sticky player: state, playback and UI rules
 
 ## Deployment
 

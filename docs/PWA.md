@@ -145,3 +145,4 @@ safe radius of 204.8 px (80% of the icon). No extra padding is required.
 - [DATABASE.md](./DATABASE.md) – data flow, CDN URLs and why they are not cached
 - [UPLOADING.md](./UPLOADING.md) – R2 file conventions and uploads
 - [ADMIN.md](./ADMIN.md) – what you can do in the admin UI
+- [PLAYER.md](./PLAYER.md) – the sticky player: state, playback and UI rules
