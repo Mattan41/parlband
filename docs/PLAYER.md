@@ -10,7 +10,7 @@ owns an `<audio>` element, and the only place that talks to `POST /api/plays`.
 | Piece                    | File                              | Responsibility                                                                                                                 |
 | ------------------------ | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | Bar, transport, panels   | `components/StickyPlayer.tsx`     | playback, transport UI, sleeve/queue state                                                                                     |
-| Track sleeve ("Låtinfo") | `components/TrackSleeve.tsx`      | cover backdrop, credits, recording info, `/texter` link                                                                        |
+| Track sleeve ("Låtinfo") | `components/TrackSleeve.tsx`      | cover backdrop, credits, recording info, "Visa text" (same-page switch to the Texter view)                                     |
 | Song row                 | `components/SongRow.tsx`          | hands a song to the store (play / add to queue / download); title + year only, with a playing dot and a queue-tap confirmation |
 | Playback state           | `store/playerStore.ts`            | `currentSong`, `queue`, `catalog`, `isPlaying`, `playbackId`, `nextCatalogSong`                                                |
 | Now-playing indicator    | `components/PlayingIndicator.tsx` | shared animated equalizer (three amber bars) used by the row and the queue panel                                               |
@@ -115,8 +115,9 @@ Two things to know before editing these classes:
 - Rendered above the bar while `sleeveOpen`: a blurred, full-bleed cover backdrop
   (falls back to the app icon when the recording has no cover, or when the cover URL
   fails to load), the title, the credits, the recording metadata, the musicians with
-  their instruments, and a "Visa text" link to `/texter?song=<id>` – the link is only
-  offered when the song actually has lyrics.
+  their instruments, and a "Visa text" button that switches to the Texter view with
+  this song (`router.replace("/?song=<id>")`, no route change); it is only offered
+  when the song actually has lyrics.
 - Toggles: the tappable title row above the strip (hidden while the sleeve is open,
   since the sleeve already shows the title) and the permanent info button in the
   strip. Both carry `aria-expanded`.
@@ -228,3 +229,5 @@ const SPACE_SHORTCUT_IGNORE_SELECTOR = [
   stale state while verifying a change
 - [ADMIN.md](./ADMIN.md) – the admin-side "Låtinfo" section, which is a different
   thing from the player's sleeve
+- [ARCHITECTURE.md](./ARCHITECTURE.md) – why the public views share one route, so a
+  view switch never interrupts playback

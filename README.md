@@ -70,18 +70,17 @@ npm run db:reset     # wipe local D1, re-apply the schema and seeds.sql
 ```
 app/                 App Router routes
   layout.tsx         root layout: fonts, metadata, <StickyPlayer>, SW registration
-  page.tsx           / – hero, Kommande spelningar (hidden when empty) and the tracklist
-  texter/page.tsx    /texter – lyrics & chords; deep-links via ?song=<id>
-  about/page.tsx     /about – "Om oss"; heading + body from GET /api/content
+  page.tsx           / – the whole public SPA (Lyssna/Texter/Om oss views; ?view=/?song=)
   admin/page.tsx     /admin – catalogue editor (Cloudflare Access)
   admin/gigs/page.tsx      /admin/gigs – gig calendar editor
   admin/about/page.tsx     /admin/about – editor for the welcome text + "Om oss"
   icon.png           app/favicon icon, served at /icon.png (rendered from public/pwa-icon.svg)
   robots.ts          /robots.txt (static export)
   sitemap.ts         /sitemap.xml (static export)
-components/          shared UI (PublicShell, SiteNav, StreamingLinks, SongRow, StickyPlayer, TrackSleeve,
-                     ServiceWorkerRegistrar, iconButton.ts, songCredits.ts) + home/, about/, texter/, admin/
-                     (about/ holds InstallAppCard.tsx + its pure installApp.ts detection helpers)
+components/          shared UI (PublicShell, SiteNav, publicView.ts, StreamingLinks, SongRow, StickyPlayer,
+                     TrackSleeve, ServiceWorkerRegistrar, iconButton.ts, songCredits.ts) + home/, about/,
+                     texter/, admin/ (about/ holds InstallAppCard.tsx + its installApp.ts helpers;
+                     texter/ holds TexterView.tsx + lyricsLines.ts)
 data/                API types and helpers (songs.ts, gigs.ts, content.ts, admin.ts, siteLinks.ts)
 store/               Zustand player state (playerStore.ts)
 functions/api/       Pages Functions: songs, plays, downloads, content, gigs, admin CRUD + upload
@@ -94,19 +93,22 @@ public/
 migrations/          versioned D1 schema
 tests/               Vitest unit tests (Access JWT guard, gigs, content rules, download URL,
                      musician overview, publication flags, mp3/sheet-music upload rules)
-docs/                DATABASE.md, UPLOADING.md, ADMIN.md, PWA.md, PLAYER.md
+docs/                DATABASE.md, UPLOADING.md, ADMIN.md, PWA.md, PLAYER.md, ARCHITECTURE.md
 ```
 
 ## Routes
 
-| Route          | Description                                                                   |
-| -------------- | ----------------------------------------------------------------------------- |
-| `/`            | Hero + Kommande spelningar (no section until a date exists) + tracklist       |
-| `/texter`      | Lyrics & chords for songs that have lyrics; `?song=<id>` deep links           |
-| `/about`       | "Om oss": editable heading + text, streaming links, install-app card, contact |
-| `/admin`       | Admin/editor UI, protected by Cloudflare Access                               |
-| `/admin/gigs`  | Gig calendar editor, protected by Cloudflare Access                           |
-| `/admin/about` | Editor for the welcome text and the Om oss page, Cloudflare Access            |
+| Route          | Description                                                                             |
+| -------------- | --------------------------------------------------------------------------------------- |
+| `/`            | The public SPA: Lyssna + Texter (`?view=texter`, `?song=<id>`) + Om oss (`?view=about`) |
+| `/admin`       | Admin/editor UI, protected by Cloudflare Access                                         |
+| `/admin/gigs`  | Gig calendar editor, protected by Cloudflare Access                                     |
+| `/admin/about` | Editor for the welcome text and the Om oss view, Cloudflare Access                      |
+
+`/texter` and `/about` are no longer routes. They 301-redirect to `/` via
+`public/_redirects` (a `?song=` query string survives the redirect) and
+`app/page.tsx` picks the view from the query string. See
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## PWA / installability
 
@@ -184,6 +186,7 @@ is why the example repeats `NEXT_PUBLIC_AUDIO_BASE_URL`.
 - [docs/ADMIN.md](docs/ADMIN.md) – what you can do in the admin UI
 - [docs/PWA.md](docs/PWA.md) – manifest, service worker, install/offline testing
 - [docs/PLAYER.md](docs/PLAYER.md) – the sticky player: state, playback and UI rules
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) – the structural decisions behind the app
 
 ## Deployment
 

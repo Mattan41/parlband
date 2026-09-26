@@ -22,7 +22,7 @@ D1 (parlband-db)
                             to the WAV in R2)
   └─ functions/api/content.ts GET /api/content (site_content → editable page copy)
        ├─ components/home/Hero.tsx     welcome line on the landing page
-       └─ components/about/AboutView.tsx  heading + body on /about
+       └─ components/about/AboutView.tsx  heading + body on the Om oss view
   └─ functions/api/gigs.ts    GET /api/gigs    (upcoming gigs)
        └─ components/home/GigList.tsx  "Kommande spelningar"; renders nothing when empty
   └─ functions/api/admin/*    /api/admin/*   (CRUD + R2 uploads: mp3/wav/cover/pdf)
@@ -64,9 +64,9 @@ settings.
     (the admin's "manuell" escape hatch) is validated as a bare `.pdf` file name
     and checked against R2 when it changes (`pdf_invalid` / `pdf_missing`).
   - `is_published`: `1` when the song may be shown on the site, `0` when it is a
-    draft. **Public `GET /api/songs` only returns published songs**, and `/texter`
-    reads the same endpoint, so a draft disappears from the lyrics/chords view
-    too; `GET /api/admin/songs` returns every song. Independent of
+    draft. **Public `GET /api/songs` only returns published songs**, and the
+    Texter view reads the same endpoint, so a draft disappears from the
+    lyrics/chords view too; `GET /api/admin/songs` returns every song. Independent of
     `recordings.is_public`/`is_primary` – a song must be published **and** have a
     public recording to be playable. Added in
     `0009_songs_gigs_is_published.sql`.
@@ -95,8 +95,9 @@ settings.
 
 - **site_content** – Editable site copy as `key`/`value`:
   `welcome_text` (the welcome line under the band members on the landing page),
-  `about_heading` and `about_body` (the heading and free text on `/about`). All
-  three are edited at `/admin/about`; the key/value shape keeps the schema stable
+  `about_heading` and `about_body` (the heading and free text on the Om oss
+  view). All three are edited at `/admin/about`; the key/value shape keeps the
+  schema stable
   when more editable copy is added.
 
 - **gigs** – The gig calendar ("Kommande spelningar"), edited at `/admin/gigs`.
@@ -276,7 +277,8 @@ could never be observed in the browser.
 - `GET /api/content` (public, `functions/api/content.ts`) returns
   `{ "welcomeText": string, "aboutHeading": string, "aboutBody": string }` from
   `site_content`. Missing rows resolve to `""`, so the landing page simply omits
-  the welcome line and `/about` falls back to its built-in "Om oss" heading.
+  the welcome line and the Om oss view falls back to its built-in "Om oss"
+  heading.
 - `PUT /api/admin/content` (protected, `functions/api/admin/content.ts`) upserts
   all three keys in one `DB.batch`:
   `{ welcomeText, aboutHeading, aboutBody }` →

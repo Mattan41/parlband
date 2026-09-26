@@ -93,7 +93,7 @@ Then in Chrome DevTools → **Application**:
 
 - **Manifest** – no errors, `Pärlband`, `#18181b`, the icons render crisp.
 - **Service Workers** – `/sw.js` activated with scope `/`.
-- **Cache Storage** – `parlband-shell-v1` contains `/`, the manifest and icons.
+- **Cache Storage** – `parlband-shell-v3` contains `/`, the manifest and icons.
 - **Install app** – the install icon appears in the address bar (desktop). On
   iOS there is no prompt: use Share → _Add to Home Screen_.
 
@@ -101,7 +101,7 @@ Confirm playback still works with the worker active: play a song and check that
 `cdn.kruskopf.org/parlband/mp3/...` requests are **not** handled by the service
 worker in the Network panel.
 
-## Install prompt on /about
+## Install prompt on the Om oss view
 
 `components/about/InstallAppCard.tsx` ("Spara som app") turns the installability
 into something a visitor can act on from the Om oss page. It stays hidden when
@@ -140,7 +140,8 @@ the pure `components/about/installApp.ts` helpers and unit-tested in
 `tests/install-app.test.ts`.
 
 To verify on a real install: install the app, then reopen
-`https://parlband.kruskopf.org/about` in a normal tab – the card must not appear.
+`https://parlband.kruskopf.org/?view=about` in a normal tab – the card must not
+appear.
 DevTools → **Application → Manifest** shows the parsed `related_applications`,
 and `await navigator.getInstalledRelatedApps()` in the console should list the
 `webapp` entry on a device that has it installed.
