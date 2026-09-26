@@ -12,13 +12,11 @@
  *
  * Bump CACHE_NAME when the precache list or shell changes.
  */
-const CACHE_NAME = "parlband-shell-v2";
+const CACHE_NAME = "parlband-shell-v3";
 
 /** App shell files that must be available offline. */
 const APP_SHELL = [
   "/",
-  "/about",
-  "/texter",
   "/manifest.json",
   "/icons/icon-192x192.png",
   "/icons/icon-512x512.png",

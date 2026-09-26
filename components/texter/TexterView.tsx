@@ -1,8 +1,7 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import PublicShell from "@/components/PublicShell";
+import { useEffect, useState, type ReactNode } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { formatSongCredits } from "@/components/songCredits";
 import {
   filterLyricLines,
@@ -19,40 +18,22 @@ function hasLyrics(song: Song): song is SongWithLyrics {
 }
 
 /**
- * /texter – lyrics and chords, rendered as plain text exactly as stored.
+ * "Texter" view – lyrics and chords, rendered as plain text exactly as stored.
  *
- * The route is static (no dynamic segments): the static export has no song
- * data at build time, so everything is fetched at runtime from /api/songs.
+ * This used to be the /texter route; it is now one of the views switched inside
+ * the single `/` page (app/page.tsx), so selecting a song never leaves the page
+ * and the app-wide player keeps its state. The song list is fetched at runtime
+ * from /api/songs (the static export has no data at build time) and
+ * `?song=<id>` remains the single source of truth for the selection: a shared
+ * link, the browser's back button and a "Visa text" tap in the player all just
+ * change the query string.
  *
- * `TexterView` reads the `?song=<id>` query string through `useSearchParams`,
- * which during a production build forces the tree below the closest Suspense
- * boundary to be client-side rendered. The boundary below is therefore
- * required, not cosmetic — without it the static export build fails.
+ * Reading `useSearchParams` forces the tree below the closest Suspense boundary
+ * to be client-side rendered during a production build; app/page.tsx provides
+ * that boundary.
  */
-export default function TexterPage() {
-  return (
-    <PublicShell>
-      <header className="text-center">
-        <h1 className="text-4xl font-bold tracking-tight text-zinc-900 sm:text-5xl dark:text-zinc-50">
-          Texter
-        </h1>
-        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-          Låttexter och ackord.
-        </p>
-      </header>
-
-      <Suspense
-        fallback={<p className="text-center text-zinc-500">Laddar texter…</p>}
-      >
-        <TexterView />
-      </Suspense>
-    </PublicShell>
-  );
-}
-
-function TexterView() {
+export default function TexterView() {
   const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const [songs, setSongs] = useState<SongWithLyrics[]>([]);
@@ -60,13 +41,10 @@ function TexterView() {
   const [error, setError] = useState(false);
   /**
    * Detail-view selection is derived from `?song=<id>` on every render, so the
-   * URL is the single source of truth: a shared/bookmarked link, the browser's
-   * back button and a link from the sticky player's track sleeve all switch the
-   * view. A local `useState` copy would read the query string only on mount, so
-   * a second navigation to the same route would be a no-op.
-   *
-   * A query param that does not match a loaded song resolves to no selection
-   * (and the list view).
+   * URL is the single source of truth. A local `useState` copy would read the
+   * query string only on mount, so a second selection on the same route would
+   * be a no-op. A query param that does not match a loaded song resolves to no
+   * selection (and the list view).
    */
   const selectedSongId = searchParams.get("song");
   /**
@@ -104,36 +82,34 @@ function TexterView() {
   const selectedSong = songs.find((song) => song.id === selectedSongId) ?? null;
 
   function selectSong(id: string) {
-    // replace (not push) so flipping between songs does not spam browser history.
-    router.replace(`${pathname}?song=${encodeURIComponent(id)}`, {
-      scroll: false,
-    });
+    // replace (not push) so flipping between songs does not spam browser
+    // history. `?song=` on its own also keeps this view active.
+    router.replace(`/?song=${encodeURIComponent(id)}`, { scroll: false });
   }
 
   function clearSelection() {
-    router.replace(pathname, { scroll: false });
+    // Back to the list, still inside the "texter" view (same `/` page).
+    router.replace("/?view=texter", { scroll: false });
   }
+
+  let content: ReactNode;
 
   if (loading) {
-    return <p className="text-center text-zinc-500">Laddar texter…</p>;
-  }
-
-  if (error) {
-    return (
+    content = <p className="text-center text-zinc-500">Laddar texter…</p>;
+  } else if (error) {
+    content = (
       <p className="text-center text-zinc-500">
         Kunde inte ladda texterna just nu.
       </p>
     );
-  }
-
-  if (songs.length === 0) {
-    return <p className="text-center text-zinc-500">Inga låttexter ännu.</p>;
-  }
-
-  if (selectedSong) {
+  } else if (songs.length === 0) {
+    content = (
+      <p className="text-center text-zinc-500">Inga låttexter ännu.</p>
+    );
+  } else if (selectedSong) {
     const showChordToggle = hasChordLines(selectedSong.lyrics);
 
-    return (
+    content = (
       <article className="rounded-xl border border-zinc-200 bg-white p-4 shadow-md sm:p-6 dark:border-zinc-800 dark:bg-zinc-900">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <button
@@ -175,26 +151,41 @@ function TexterView() {
         </pre>
       </article>
     );
+  } else {
+    content = (
+      <ul className="space-y-3">
+        {songs.map((song) => (
+          <li key={song.id}>
+            <button
+              type="button"
+              onClick={() => selectSong(song.id)}
+              className="w-full rounded-xl border border-transparent bg-white p-4 text-left shadow-md transition hover:border-amber-300 hover:bg-amber-50/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 dark:bg-zinc-900 dark:hover:border-amber-500/60 dark:hover:bg-amber-500/10"
+            >
+              <span className="block text-lg font-semibold text-black dark:text-zinc-50">
+                {song.title}
+              </span>
+              <span className="block text-sm text-zinc-600 dark:text-zinc-400">
+                {formatSongCredits(song)}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    );
   }
 
   return (
-    <ul className="space-y-3">
-      {songs.map((song) => (
-        <li key={song.id}>
-          <button
-            type="button"
-            onClick={() => selectSong(song.id)}
-            className="w-full rounded-xl border border-transparent bg-white p-4 text-left shadow-md transition hover:border-amber-300 hover:bg-amber-50/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 dark:bg-zinc-900 dark:hover:border-amber-500/60 dark:hover:bg-amber-500/10"
-          >
-            <span className="block text-lg font-semibold text-black dark:text-zinc-50">
-              {song.title}
-            </span>
-            <span className="block text-sm text-zinc-600 dark:text-zinc-400">
-              {formatSongCredits(song)}
-            </span>
-          </button>
-        </li>
-      ))}
-    </ul>
+    <>
+      <header className="text-center">
+        <h1 className="text-4xl font-bold tracking-tight text-zinc-900 sm:text-5xl dark:text-zinc-50">
+          Texter
+        </h1>
+        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+          Låttexter och ackord.
+        </p>
+      </header>
+
+      {content}
+    </>
   );
 }

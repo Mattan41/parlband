@@ -76,15 +76,15 @@ destination can never leave the write endpoints open:
   filters out anything else. The **Publicerad** checkbox lives under **Synlighet**
   in the song editor; unchecking it turns the song into a **draft**, which shows
   an **Utkast** badge in the admin list and disappears from both the landing page
-  and `/texter` while staying fully editable here.
+  and the Texter view while staying fully editable here.
 - **Visibility is an editing concern, not a creation one.** A new song is always
   created published – the "Ny låt" modal carries no visibility control – and the
   single **Publicerad** checkbox in the editor is what unpublishes it later. One
   control, in one place.
 - The **id (slug)** is chosen in the "Ny låt" modal and **cannot be changed
   afterwards**: it names the R2 files (`<id>.pdf`, `<id>-<hash>.mp3`), is the
-  foreign key on `recordings` and appears in `/texter?song=<id>` links. The song
-  header therefore carries the reminder `id:t kan inte ändras`.
+  foreign key on `recordings` and appears in `/?song=<id>` links. The song header
+  therefore carries the reminder `id:t kan inte ändras`.
 - **Delete a song** with **Ta bort låt** in its Låtinfo panel. A song that still
   has recordings is refused (`409`, "Låten har inspelningar – ta bort dem
   först.") – delete its recordings first. Only the `songs` row is removed; R2
@@ -246,21 +246,24 @@ separate save is needed for the file.
   - **Välkomsttext (startsidan)** – the line under the band members in the
     landing-page hero (`site_content.welcome_text`). An emptied field hides the
     line completely.
-  - **Rubrik (Om oss-sidan)** – the heading of `/about`
-    (`site_content.about_heading`). An emptied field falls back to the built-in
-    "Om oss", which is also what the nav link says.
-  - **Text (Om oss-sidan)** – the body of `/about` (`site_content.about_body`).
+  - **Rubrik (Om oss-sidan)** – the heading of the Om oss view
+    (`?view=about`, `site_content.about_heading`). An emptied field falls back to
+    the built-in "Om oss", which is also what the nav button says.
+  - **Text (Om oss-sidan)** – the body of the Om oss view
+    (`site_content.about_body`).
 - One **Spara texterna** button saves all three keys; it is disabled until
   something actually changed.
 - The copy is rendered as plain text (line breaks are preserved, no markdown).
   The body sits above the streaming links, which are static.
-- The page `<title>` is fixed to "Om oss – Pärlband" (the static export cannot
-  read the heading at build time) and the public nav label is hardcoded, so
+- The Om oss view has **no per-view `<title>`** (the static export cannot read
+  the heading at build time and the three public views share one route), so it
+  shows the site title "Pärlband"; the public nav label is hardcoded too, so
   neither changes with the heading.
-- **Visa sidan ↗** opens the public page in a new tab. Saving shows an inline
-  confirmation.
-- The public page also lives at `/about`; it is linked from the public nav, so no
-  admin change is needed for visitors to find it.
+- **Visa sidan ↗** opens the Om oss view (`/?view=about`) in a new tab. Saving
+  shows an inline confirmation.
+- The Om oss view is part of the public SPA at `/`; it is reachable from the
+  public nav, and old `/about` links 301-redirect there. No admin change is
+  needed for visitors to find it.
 
 ## Credits
 
@@ -311,3 +314,4 @@ credits editor (and every other sub-editor) sits next to it, not inside it.
 - [PWA.md](./PWA.md) – app install, service worker caching and offline behavior
 - [PLAYER.md](./PLAYER.md) – the public sticky player and its sleeve; note that the
   "Låtinfo" section here in the admin UI is a different thing from the player's sleeve
+- [ARCHITECTURE.md](./ARCHITECTURE.md) – why the public views share one route

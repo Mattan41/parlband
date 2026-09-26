@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { Song } from "@/data/songs";
 import { formatSongCredits } from "./songCredits";
 
@@ -10,8 +10,8 @@ interface Props {
   /** Track whose details are shown; always the sticky player's current song. */
   song: Song;
   /**
-   * Closes the sleeve. Called by the close button, the /texter link, and by the
-   * player bar's background click handler that wraps this component.
+   * Closes the sleeve. Called by the close button, the "Visa text" button, and
+   * by the player bar's background click handler that wraps this component.
    */
   onClose: () => void;
 }
@@ -36,17 +36,20 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 /**
  * Expandable "track sleeve" for the sticky player: a full-bleed cover backdrop
  * with the song title, credits and recording metadata, the musicians with their
- * instruments, and a link to the song's lyrics/chords on /texter.
+ * instruments, and a way to open the song's lyrics/chords in the "Texter" view.
  *
  * Purely presentational and independent of playback: it renders above the
  * player bar and owns no audio state, so opening or closing it can never pause,
  * restart or otherwise interrupt the current track. The sleeve carries no
  * dismiss logic of its own – the player bar wraps it in a background click
  * handler, so a tap on the artwork, the text or the bar around the controls
- * folds it, and the × here is the explicit shortcut. The /texter link closes the
- * sleeve as it navigates, so the reader is not left with an open panel.
+ * folds it, and the × here is the explicit shortcut. The "Visa text" button
+ * closes the sleeve as it switches view, so the reader is not left with an open
+ * panel.
  */
 export default function TrackSleeve({ song, onClose }: Props) {
+  const router = useRouter();
+
   const recordingRows = [
     song.album ? { label: "Album", value: song.album } : null,
     song.year ? { label: "År", value: String(song.year) } : null,
@@ -55,8 +58,9 @@ export default function TrackSleeve({ song, onClose }: Props) {
   ].filter((row): row is { label: string; value: string } => row !== null);
 
   /**
-   * Only offered when the song actually has lyrics: `/texter` lists nothing else,
-   * so for a song without text the link would open a page that does not contain it.
+   * Only offered when the song actually has lyrics: the "Texter" view lists
+   * nothing else, so for a song without text the button would open a view that
+   * does not contain it.
    */
   const hasLyrics =
     typeof song.lyrics === "string" && song.lyrics.trim() !== "";
@@ -174,27 +178,20 @@ export default function TrackSleeve({ song, onClose }: Props) {
             ) : null}
 
             {hasLyrics ? (
-              <Link
-                href={`/texter?song=${encodeURIComponent(song.id)}`}
-                onClick={(event) => {
-                  // Only fold the sleeve for a plain left click. With a modifier
-                  // (or a middle click) the lyric page opens in a new tab, so the
-                  // current tab should keep whatever it was showing.
-                  if (
-                    event.metaKey ||
-                    event.ctrlKey ||
-                    event.shiftKey ||
-                    event.altKey ||
-                    event.button !== 0
-                  ) {
-                    return;
-                  }
+              <button
+                type="button"
+                onClick={() => {
+                  // Same-page view switch: `?song=<id>` makes app/page.tsx show
+                  // the "Texter" view with this song, without a route change.
                   onClose();
+                  router.replace(`/?song=${encodeURIComponent(song.id)}`, {
+                    scroll: false,
+                  });
                 }}
-                className="inline-block text-xs font-medium text-amber-700 underline underline-offset-4 dark:text-amber-400"
+                className="text-xs font-medium text-amber-700 underline underline-offset-4 dark:text-amber-400"
               >
                 Visa text
-              </Link>
+              </button>
             ) : null}
           </div>
         </div>

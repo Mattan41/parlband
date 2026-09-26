@@ -10,7 +10,7 @@ owns an `<audio>` element, and the only place that talks to `POST /api/plays`.
 | Piece                    | File                              | Responsibility                                                                                                                 |
 | ------------------------ | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | Bar, transport, panels   | `components/StickyPlayer.tsx`     | playback, transport UI, sleeve/queue state                                                                                     |
-| Track sleeve ("Låtinfo") | `components/TrackSleeve.tsx`      | cover backdrop, credits, recording info, `/texter` link                                                                        |
+| Track sleeve ("Låtinfo") | `components/TrackSleeve.tsx`      | cover backdrop, credits, recording info, "Visa text" (same-page switch to the Texter view)                                     |
 | Song row                 | `components/SongRow.tsx`          | hands a song to the store (play / add to queue / download); title + year only, with a playing dot and a queue-tap confirmation |
 | Playback state           | `store/playerStore.ts`            | `currentSong`, `queue`, `catalog`, `isPlaying`, `playbackId`, `nextCatalogSong`                                                |
 | Now-playing indicator    | `components/PlayingIndicator.tsx` | shared animated equalizer (three amber bars) used by the row and the queue panel                                               |
@@ -115,8 +115,9 @@ Two things to know before editing these classes:
 - Rendered above the bar while `sleeveOpen`: a blurred, full-bleed cover backdrop
   (falls back to the app icon when the recording has no cover, or when the cover URL
   fails to load), the title, the credits, the recording metadata, the musicians with
-  their instruments, and a "Visa text" link to `/texter?song=<id>` – the link is only
-  offered when the song actually has lyrics.
+  their instruments, and a "Visa text" button that switches to the Texter view with
+  this song (`router.replace("/?song=<id>")`, no route change); it is only offered
+  when the song actually has lyrics.
 - Toggles: the tappable title row above the strip (hidden while the sleeve is open,
   since the sleeve already shows the title) and the permanent info button in the
   strip. Both carry `aria-expanded`.
@@ -141,7 +142,7 @@ Two things to know before editing these classes:
     `text-amber-600 dark:text-amber-400`, mirroring the active row's highlight.
     The equalizer animates only while `isPlaying`; when paused its bars rest at a
     low static height.
-  - **"Kommande (Kön)"** – the queued tracks (title, artist from `sm` up, remove
+  - **"Nästa (Kö)"** – the queued tracks (title, artist from `sm` up, remove
     button). When the queue is empty it shows the muted note _"Resten av
     låtlistan spelas i slinga"_ instead, explaining the catalog fallback.
 - Opening the queue folds the sleeve and vice versa – they share the same space
@@ -201,7 +202,7 @@ const SPACE_SHORTCUT_IGNORE_SELECTOR = [
 2. Press Space anywhere (outside a text field/dialog): playback toggles; after
    clicking "Spela nästa", Space still toggles play instead of re-firing skip.
 3. Queue two songs: the badge shows `2`, the panel floats above the bar without
-   shifting the layout (with a "Spelas nu" section on top and "Kommande (Kön)"
+   shifting the layout (with a "Spelas nu" section on top and "Nästa (Kö)"
    below) – check both themes.
 4. Let a track finish with an empty queue: playback advances to the next catalog
    song, and the last song wraps around to the first. With a queued track it is
@@ -228,3 +229,5 @@ const SPACE_SHORTCUT_IGNORE_SELECTOR = [
   stale state while verifying a change
 - [ADMIN.md](./ADMIN.md) – the admin-side "Låtinfo" section, which is a different
   thing from the player's sleeve
+- [ARCHITECTURE.md](./ARCHITECTURE.md) – why the public views share one route, so a
+  view switch never interrupts playback
