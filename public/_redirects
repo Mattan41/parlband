@@ -1,2 +1,9 @@
 # /admin/spelningar was renamed to /admin/gigs; keep old bookmarks working.
 /admin/spelningar /admin/gigs 301
+
+# /texter and /about are now views on the single "/" page. Redirect the old
+# paths to it so old bookmarks keep working; the query string (for example a
+# /texter?song=<id> deep link) passes through automatically and app/page.tsx
+# picks the view from it.
+/texter /:splat 301
+/about /:splat 301

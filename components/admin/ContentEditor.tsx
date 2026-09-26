@@ -79,7 +79,7 @@ export default function ContentEditor({ initialContent }: Props) {
           </p>
         </div>
         <Link
-          href="/about"
+          href="/?view=about"
           target="_blank"
           rel="noopener noreferrer"
           className="text-xs text-amber-700 underline underline-offset-4 dark:text-amber-400"

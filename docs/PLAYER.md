@@ -141,7 +141,7 @@ Two things to know before editing these classes:
     `text-amber-600 dark:text-amber-400`, mirroring the active row's highlight.
     The equalizer animates only while `isPlaying`; when paused its bars rest at a
     low static height.
-  - **"Kommande (Kön)"** – the queued tracks (title, artist from `sm` up, remove
+  - **"Nästa (Kö)"** – the queued tracks (title, artist from `sm` up, remove
     button). When the queue is empty it shows the muted note _"Resten av
     låtlistan spelas i slinga"_ instead, explaining the catalog fallback.
 - Opening the queue folds the sleeve and vice versa – they share the same space
@@ -201,7 +201,7 @@ const SPACE_SHORTCUT_IGNORE_SELECTOR = [
 2. Press Space anywhere (outside a text field/dialog): playback toggles; after
    clicking "Spela nästa", Space still toggles play instead of re-firing skip.
 3. Queue two songs: the badge shows `2`, the panel floats above the bar without
-   shifting the layout (with a "Spelas nu" section on top and "Kommande (Kön)"
+   shifting the layout (with a "Spelas nu" section on top and "Nästa (Kö)"
    below) – check both themes.
 4. Let a track finish with an empty queue: playback advances to the next catalog
    song, and the last song wraps around to the first. With a queued track it is

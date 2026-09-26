@@ -382,7 +382,7 @@ export default function StickyPlayer() {
             {/* Queued tracks, or a note explaining the catalog loop. */}
             <div className="border-t border-zinc-200 dark:border-zinc-700">
               <p className="px-3 pt-3 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                Kommande (Kön)
+                Nästa (Kö)
               </p>
               {queue.length > 0 ? (
                 <ul className="max-h-[min(60vh,20rem)] overflow-y-auto p-2">
