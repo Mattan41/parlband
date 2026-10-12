@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { nextCatalogSong, usePlayerStore } from "@/store/playerStore";
+import { fetchSiteSettings } from "@/data/settings";
+import { usePlayerStore } from "@/store/playerStore";
 import { iconButtonClass, iconButtonDisabledClass } from "./iconButton";
 import PlayingIndicator from "./PlayingIndicator";
 import TrackSleeve from "./TrackSleeve";
@@ -65,6 +66,8 @@ export default function StickyPlayer() {
   const togglePlay = usePlayerStore((state) => state.togglePlay);
   const playNext = usePlayerStore((state) => state.playNext);
   const removeFromQueue = usePlayerStore((state) => state.removeFromQueue);
+  const playbackMode = usePlayerStore((state) => state.playbackMode);
+  const setPlaybackMode = usePlayerStore((state) => state.setPlaybackMode);
 
   const recordingId = currentSong?.recording_id;
   const src = currentSong?.src;
@@ -121,15 +124,10 @@ export default function StickyPlayer() {
       // Replaying a finished track is a new listening.
       hasCountedRef.current = false;
       const state = usePlayerStore.getState();
-      // With a queued track, or another song in the catalog to fall back on,
-      // keep playing. `playNext` owns both paths (queue first, then the catalog
-      // in a loop). Only a track that has nowhere to go stops the player.
-      if (
-        state.queue.length > 0 ||
-        nextCatalogSong(state.catalog, state.currentSong) !== null
-      ) {
-        state.playNext();
-      } else {
+      // `playNext` owns the whole decision: the queue first, then the catalogue
+      // according to the active playback mode. When it cannot advance (queue
+      // empty and the mode has nowhere to go) the player stops.
+      if (!state.playNext()) {
         state.setIsPlaying(false);
         setCurrentTime(0);
       }
@@ -202,6 +200,25 @@ export default function StickyPlayer() {
     // Pausing, switching tracks or unmounting cancels the pending count.
     return () => clearTimeout(timer);
   }, [isPlaying, playbackId, recordingId, src]);
+
+  // -------- load the end-of-queue behaviour once ----------
+  // Edited at /admin/settings. On failure the store keeps its default (`loop`),
+  // so playback still works exactly as before.
+  useEffect(() => {
+    let cancelled = false;
+
+    fetchSiteSettings()
+      .then((settings) => {
+        if (!cancelled) setPlaybackMode(settings.playbackMode);
+      })
+      .catch((error: unknown) => {
+        console.error("Failed to load site settings", error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [setPlaybackMode]);
 
   const seek = (event: React.ChangeEvent<HTMLInputElement>) => {
     const audio = audioRef.current;
@@ -294,8 +311,12 @@ export default function StickyPlayer() {
 
   const skipButton = (
     <button
-      onClick={playNext}
-      disabled={queue.length === 0 && catalog.length <= 1}
+      onClick={() => {
+        playNext();
+      }}
+      disabled={
+        queue.length === 0 && (playbackMode === "none" || catalog.length <= 1)
+      }
       title="Spela nästa"
       aria-label="Spela nästa"
       className={`${iconButtonClass} ${iconButtonDisabledClass} sm:order-3 h-12! w-12! shrink-0`}

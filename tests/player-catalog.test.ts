@@ -38,4 +38,27 @@ describe("nextCatalogSong", () => {
   it("returns null when there is no current song", () => {
     expect(nextCatalogSong([a, b], null)).toBeNull();
   });
+
+  it("returns null in `none` mode, whatever the position", () => {
+    expect(nextCatalogSong([a, b, c], a, { mode: "none" })).toBeNull();
+    expect(nextCatalogSong([a, b, c], c, { mode: "none" })).toBeNull();
+  });
+
+  it("advances to the next unplayed song in `once` mode", () => {
+    expect(
+      nextCatalogSong([a, b, c], b, { mode: "once", played: ["a", "b"] })
+    ).toBe(c);
+  });
+
+  it("wraps around in `once` mode to reach an unplayed song", () => {
+    expect(
+      nextCatalogSong([a, b, c], c, { mode: "once", played: ["b", "c"] })
+    ).toBe(a);
+  });
+
+  it("returns null in `once` mode once every song has played", () => {
+    expect(
+      nextCatalogSong([a, b, c], c, { mode: "once", played: ["a", "b", "c"] })
+    ).toBeNull();
+  });
 });

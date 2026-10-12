@@ -46,23 +46,34 @@ restart or otherwise interrupt a track.
 - `isPlaying` is mirrored onto the element (play/pause effect), and the element's
   own `play`/`pause` events write back through `setIsPlaying`, so the UI follows a
   browser-initiated pause too.
-- `ended`: `playNext()` whenever there is something to advance to – a queued
-  track (`queue.length > 0`) or another song in the catalog
-  (`nextCatalogSong(catalog, currentSong) !== null`). Only a track that has
-  nowhere to go falls back to `setIsPlaying(false)` and a reset elapsed time.
-- **Catalog fallback (endless loop).** `components/home/SongList.tsx` mirrors the
-  landing-page list into the store via `setCatalog`, so when the manual queue is
-  empty playback continues through the catalog and wraps from the last song back
-  to the first (`(index + 1) % catalog.length`). The catalog is deliberately not
-  cleared on unmount, so the loop survives navigation to another route. Both the
-  skip button and the `ended` handler share the same `playNext` path, which owns
-  the queue-first-then-catalog order.
+- `ended`: calls `playNext()`. `playNext` owns the whole decision – the queue
+  first, then the catalogue according to the playback mode – and returns whether
+  it advanced. When it cannot advance, the handler falls back to
+  `setIsPlaying(false)` and a reset elapsed time.
+- **Queue first, in every mode.** A queued track always plays next, whatever the
+  mode. Only when the queue is empty does the playback mode decide what happens.
+- **Catalogue fallback and playback modes.** `components/home/SongList.tsx`
+  mirrors the landing-page list into the store via `setCatalog`, so playback can
+  continue through the catalogue once the manual queue runs out. The catalogue is
+  deliberately not cleared on unmount, so it survives navigation to another
+  route. The mode comes from the `playback_mode` site setting (edited at
+  `/admin/settings`, read once via `GET /api/settings` and stored as
+  `playbackMode`):
+  - **`loop`** (default) – wraps from the last song back to the first
+    (`(index + 1) % catalog.length`), an endless loop.
+  - **`once`** – plays every catalogue song exactly once, whatever the starting
+    point, then stops. The store tracks the ids played this round
+    (`playedInRound`) and `nextCatalogSong` skips them, wrapping only to reach a
+    song that has not had its turn yet.
+  - **`none`** – no catalogue fallback; the player stops when the queue is empty.
+    Both the skip button and the `ended` handler share the same `playNext` path.
 - Seek writes `audio.currentTime` directly and mirrors it into `currentTime`; the
   slider is a plain `<input type="range">` bound to the local state.
-- Skip ("Spela nästa") is disabled only when there is nothing to advance to
-  (`queue.length === 0 && catalog.length <= 1`); with an empty queue it moves to
-  the next catalog song. The queue button shows an amber count badge when the
-  queue is not empty.
+- Skip ("Spela nästa") is disabled when there is nothing to advance to – an empty
+  queue in `none` mode, or a single-song catalogue
+  (`queue.length === 0 && (playbackMode === "none" || catalog.length <= 1)`).
+  With an empty queue it otherwise moves on according to the mode. The queue
+  button shows an amber count badge when the queue is not empty.
 
 ## Play counting
 

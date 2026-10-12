@@ -11,9 +11,10 @@ Recordings are a nested accordion under the song, and a collapsed recording row
 shows its year/album, status badges and both counters.
 
 The admin area has its own top navigation – **Katalog** (`/admin`),
-**Spelningar** (`/admin/gigs`) and **Om oss** (`/admin/about`) – rendered on
-every admin page (`components/admin/AdminNav.tsx`). It is separate from the
-public `components/SiteNav.tsx`, which links the public pages. The public
+**Spelningar** (`/admin/gigs`), **Om oss** (`/admin/about`) and
+**Inställningar** (`/admin/settings`) – rendered on every admin page
+(`components/admin/AdminNav.tsx`). It is separate from the public
+`components/SiteNav.tsx`, which links the public pages. The public
 heading of the gig section is **Kommande spelningar**; the nav pill keeps the
 shorter **Spelningar**.
 
@@ -264,6 +265,23 @@ separate save is needed for the file.
 - The Om oss view is part of the public SPA at `/`; it is reachable from the
   public nav, and old `/about` links 301-redirect there. No admin change is
   needed for visitors to find it.
+
+## Inställningar
+
+- **Inställningar** in the admin nav opens `/admin/settings`, the site-wide
+  settings (currently a single feature flag for the sticky player).
+- **När kön är tom** (`playback_mode`) sets what the player does when its queue
+  is empty and a track finishes:
+  - **Ingen nästa** (`none`) – the player stops after the current track.
+  - **Ett varv** (`once`) – plays through the whole song list once, then stops.
+  - **Oändlig loop** (`loop`) – keeps advancing and starts over at the end (the
+    default; this is what the site did before the flag existed).
+- One **Spara inställningarna** button writes the value and stays disabled until
+  something actually changed. Saving goes through `PUT /api/admin/settings`; the
+  read side is the public `GET /api/settings`.
+- The player reads the setting once when it mounts; a missing row falls back to
+  `loop`, so an un-migrated database behaves exactly as before. See
+  [PLAYER.md](./PLAYER.md) for how each mode drives auto-advance.
 
 ## Credits
 
