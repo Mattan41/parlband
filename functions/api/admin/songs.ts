@@ -1,4 +1,6 @@
+import { badRequest, readJsonBody } from "./request";
 import { isValidPdfFileName, pdfExistsInCdn } from "./sheet-music-rules";
+import { nullableText, optionalBoolean, requiredText } from "./validation";
 
 /** Song id slug: lowercase ASCII words separated by single hyphens. */
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -51,37 +53,6 @@ type AdminRecording = Omit<RecordingRow, "song_id"> & {
 };
 
 /**
- * Read the JSON body, returning null when it is missing or malformed.
- * Mirrors the defensive parsing used by functions/api/plays.ts.
- */
-async function readJsonBody<T>(request: Request): Promise<T | null> {
-  try {
-    return await request.json<T>();
-  } catch {
-    return null;
-  }
-}
-
-/** Trimmed non-empty string, or undefined when the value is unusable. */
-function requiredText(value: unknown): string | undefined {
-  if (typeof value !== "string") return undefined;
-  const trimmed = value.trim();
-  return trimmed === "" ? undefined : trimmed;
-}
-
-/** Optional text: null for missing/empty, undefined when the type is wrong. */
-function nullableText(value: unknown): string | null | undefined {
-  if (value === undefined || value === null) return null;
-  if (typeof value !== "string") return undefined;
-  const trimmed = value.trim();
-  return trimmed === "" ? null : trimmed;
-}
-
-function badRequest(error: string, code?: string): Response {
-  return Response.json(code ? { error, code } : { error }, { status: 400 });
-}
-
-/**
  * Validate a manual sheet_music_path and confirm the PDF exists in R2. Only
  * called when the path is new or changed, so a legacy row whose document lives
  * at an unusual key can still be edited without touching the file. Returns a
@@ -98,21 +69,6 @@ async function checkSheetMusicPath(
     return badRequest("PDF file not found in R2", "pdf_missing");
   }
   return null;
-}
-
-/**
- * Optional boolean with a fallback for missing values, mirroring
- * functions/api/admin/recordings.ts. Returns undefined only when a value is
- * present but has the wrong type, so a bad payload is rejected instead of
- * silently falling back.
- */
-function optionalBoolean(
-  value: unknown,
-  fallback: boolean
-): boolean | undefined {
-  if (value === undefined || value === null) return fallback;
-  if (typeof value !== "boolean") return undefined;
-  return value;
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {

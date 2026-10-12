@@ -1,3 +1,4 @@
+import { readJsonBody } from "./request";
 import { parseSettingsFields } from "./settings-rules";
 
 interface Env {
@@ -6,14 +7,6 @@ interface Env {
 
 /** `site_content` key written by this endpoint (see data/settings.ts). */
 const PLAYBACK_MODE_KEY = "playback_mode";
-
-async function readJsonBody<T>(request: Request): Promise<T | null> {
-  try {
-    return await request.json<T>();
-  } catch {
-    return null;
-  }
-}
 
 /** One upsert; the table is key/value, so new settings need no migration. */
 function upsert(db: D1Database, key: string, value: string) {

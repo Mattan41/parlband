@@ -1,33 +1,9 @@
+import { badRequest, readJsonBody } from "./request";
+import { requiredInteger, requiredText } from "./validation";
+
 interface MusicianRow {
   id: number;
   name: string;
-}
-
-async function readJsonBody<T>(request: Request): Promise<T | null> {
-  try {
-    return await request.json<T>();
-  } catch {
-    return null;
-  }
-}
-
-/** Positive integer, or undefined when the value is unusable. */
-function requiredInteger(value: unknown): number | undefined {
-  if (typeof value !== "number" || !Number.isInteger(value) || value <= 0) {
-    return undefined;
-  }
-  return value;
-}
-
-/** Trimmed non-empty string, or undefined when the value is unusable. */
-function requiredText(value: unknown): string | undefined {
-  if (typeof value !== "string") return undefined;
-  const trimmed = value.trim();
-  return trimmed === "" ? undefined : trimmed;
-}
-
-function badRequest(error: string): Response {
-  return Response.json({ error }, { status: 400 });
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {

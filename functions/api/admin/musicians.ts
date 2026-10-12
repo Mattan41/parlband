@@ -1,39 +1,10 @@
 import { findNameConflict, normalizeName } from "./musician-rules";
+import { badRequest, errorResponse, readJsonBody } from "./request";
+import { requiredInteger, requiredText } from "./validation";
 
 interface MusicianRow {
   id: number;
   name: string;
-}
-
-async function readJsonBody<T>(request: Request): Promise<T | null> {
-  try {
-    return await request.json<T>();
-  } catch {
-    return null;
-  }
-}
-
-/** Trimmed non-empty string, or undefined when the value is unusable. */
-function requiredText(value: unknown): string | undefined {
-  if (typeof value !== "string") return undefined;
-  const trimmed = value.trim();
-  return trimmed === "" ? undefined : trimmed;
-}
-
-function badRequest(error: string, code?: string): Response {
-  return Response.json(code ? { error, code } : { error }, { status: 400 });
-}
-
-function badRequestCode(error: string, code: string, status: number): Response {
-  return Response.json({ error, code }, { status });
-}
-
-/** Positive integer, or undefined when the value is unusable. */
-function requiredInteger(value: unknown): number | undefined {
-  if (typeof value !== "number" || !Number.isInteger(value) || value <= 0) {
-    return undefined;
-  }
-  return value;
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
@@ -124,7 +95,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     // name is allowed.
     const conflict = findNameConflict(all.results, normalized, id);
     if (conflict) {
-      return badRequestCode("Name already in use", "name_conflict", 409);
+      return errorResponse("Name already in use", 409, "name_conflict");
     }
 
     await context.env.DB.prepare(`UPDATE musicians SET name = ? WHERE id = ?`)

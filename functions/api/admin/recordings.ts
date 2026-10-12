@@ -1,4 +1,12 @@
 import { isValidMp3FileName, mp3ExistsInCdn } from "./recording-rules";
+import { badRequest, readJsonBody } from "./request";
+import {
+  nullableInteger,
+  nullableText,
+  optionalBoolean,
+  requiredInteger,
+  requiredText,
+} from "./validation";
 
 /** Columns returned for a single recording. */
 const RECORDING_FIELDS = `id, song_id, album, studio, year, engineer, notes,
@@ -19,61 +27,6 @@ interface RecordingRow {
   download_count: number | null;
   is_primary: number;
   is_public: number;
-}
-
-async function readJsonBody<T>(request: Request): Promise<T | null> {
-  try {
-    return await request.json<T>();
-  } catch {
-    return null;
-  }
-}
-
-/** Trimmed non-empty string, or undefined when the value is unusable. */
-function requiredText(value: unknown): string | undefined {
-  if (typeof value !== "string") return undefined;
-  const trimmed = value.trim();
-  return trimmed === "" ? undefined : trimmed;
-}
-
-/** Optional text: null for missing/empty, undefined when the type is wrong. */
-function nullableText(value: unknown): string | null | undefined {
-  if (value === undefined || value === null) return null;
-  if (typeof value !== "string") return undefined;
-  const trimmed = value.trim();
-  return trimmed === "" ? null : trimmed;
-}
-
-/** Optional integer: null for missing/empty, undefined when not an integer. */
-function nullableInteger(value: unknown): number | null | undefined {
-  if (value === undefined || value === null || value === "") return null;
-  if (typeof value !== "number" || !Number.isInteger(value)) return undefined;
-  return value;
-}
-
-/** Positive integer, or undefined when the value is unusable. */
-function requiredInteger(value: unknown): number | undefined {
-  if (typeof value !== "number" || !Number.isInteger(value) || value <= 0) {
-    return undefined;
-  }
-  return value;
-}
-
-/**
- * Optional boolean with a fallback for missing values. Returns undefined only
- * when a value is present but has the wrong type.
- */
-function optionalBoolean(
-  value: unknown,
-  fallback: boolean
-): boolean | undefined {
-  if (value === undefined || value === null) return fallback;
-  if (typeof value !== "boolean") return undefined;
-  return value;
-}
-
-function badRequest(error: string, code?: string): Response {
-  return Response.json(code ? { error, code } : { error }, { status: 400 });
 }
 
 /** Read a recording row by id (null when it does not exist). */

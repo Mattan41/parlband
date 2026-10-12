@@ -1,10 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
-import AdminNav from "@/components/admin/AdminNav";
+import AdminPage from "@/components/admin/AdminPage";
 import ContentEditor from "@/components/admin/ContentEditor";
-import { secondaryButtonClass } from "@/components/admin/adminStyles";
 import { fetchSiteContent, type SiteContent } from "@/data/content";
 
 /**
@@ -54,49 +52,13 @@ export default function AdminAboutPage() {
   }, [load]);
 
   return (
-    <div className="min-h-full flex-1 bg-zinc-100 font-sans dark:bg-zinc-950">
-      <main className="mx-auto w-full max-w-6xl px-4 py-8">
-        <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-              Pärlband – Admin
-            </h1>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              Redigera välkomsttexten på startsidan samt rubriken och texten på
-              Om oss-sidan.
-            </p>
-          </div>
-          <Link
-            href="/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-amber-700 underline underline-offset-4 dark:text-amber-400"
-          >
-            Öppna startsida i ny flik ↗
-          </Link>
-        </header>
-
-        <div className="mb-6">
-          <AdminNav />
-        </div>
-
-        {loading ? (
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">Laddar…</p>
-        ) : error ? (
-          <div className="flex flex-col items-start gap-2">
-            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-            <button
-              type="button"
-              className={secondaryButtonClass}
-              onClick={retry}
-            >
-              Försök igen
-            </button>
-          </div>
-        ) : content ? (
-          <ContentEditor initialContent={content} />
-        ) : null}
-      </main>
-    </div>
+    <AdminPage
+      subtitle="Redigera välkomsttexten på startsidan samt rubriken och texten på Om oss-sidan."
+      loading={loading}
+      error={error}
+      onRetry={retry}
+    >
+      {content ? <ContentEditor initialContent={content} /> : null}
+    </AdminPage>
   );
 }
