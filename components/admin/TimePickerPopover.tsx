@@ -30,7 +30,7 @@ function minuteOptions(currentMinute: string): string[] {
   );
   if (/^\d{2}$/.test(currentMinute) && !minutes.includes(currentMinute)) {
     minutes.push(currentMinute);
-    minutes.sort();
+    minutes.sort((a, b) => a.localeCompare(b));
   }
   return minutes;
 }
