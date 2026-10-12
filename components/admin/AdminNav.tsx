@@ -22,7 +22,7 @@ export default function AdminNav() {
   const pathname = usePathname();
 
   return (
-    <nav aria-label="Adminmeny" className="flex items-center gap-2">
+    <nav aria-label="Adminmeny" className="flex flex-wrap items-center gap-2">
       {ADMIN_NAV_LINKS.map((link) => {
         const active = pathname === link.href;
 
@@ -31,7 +31,7 @@ export default function AdminNav() {
             key={link.href}
             href={link.href}
             aria-current={active ? "page" : undefined}
-            className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition ${
+            className={`whitespace-nowrap rounded-full border px-3.5 py-1.5 text-xs font-medium transition ${
               active
                 ? "border-amber-400 bg-amber-50 text-amber-900 dark:border-amber-500/70 dark:bg-amber-500/10 dark:text-amber-200"
                 : "border-zinc-300 bg-white text-zinc-800 hover:border-zinc-400 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
