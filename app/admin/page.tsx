@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import AdminNav from "@/components/admin/AdminNav";
 import NewSongForm from "@/components/admin/NewSongForm";
@@ -17,6 +17,16 @@ import {
   type AdminMusician,
   type AdminSong,
 } from "@/data/admin";
+
+/**
+ * Song id from a `#song-<id>` deep link (from /admin/recordings), or null.
+ * Guarded for SSR, where `window` does not exist.
+ */
+function songIdFromHash(): string | null {
+  if (typeof window === "undefined") return null;
+  const match = /^#song-(.+)$/.exec(window.location.hash);
+  return match ? decodeURIComponent(match[1]) : null;
+}
 
 interface LoadError {
   text: string;
@@ -64,8 +74,12 @@ const RETRY_DELAY_MS = 800;
 export default function AdminPage() {
   const [songs, setSongs] = useState<AdminSong[]>([]);
   const [musicians, setMusicians] = useState<AdminMusician[]>([]);
-  /** Id of the single expanded song, or null when all are collapsed. */
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  /**
+   * Id of the single expanded song, or null when all are collapsed. Seeded from
+   * a `#song-<id>` deep link (see songIdFromHash) so /admin/recordings can open
+   * a song straight away.
+   */
+  const [expandedId, setExpandedId] = useState<string | null>(songIdFromHash);
   /** Song whose "new recording" modal is open, or null when it is closed. */
   const [recordingSongId, setRecordingSongId] = useState<string | null>(null);
   /** The single expanded recording card, or null when all are collapsed. */
@@ -150,6 +164,22 @@ export default function AdminPage() {
   const toggle = useCallback((id: string) => {
     setExpandedId((current) => (current === id ? null : id));
   }, []);
+
+  /** Guards the one-shot deep-link scroll below. */
+  const deepLinkScrolledRef = useRef(false);
+
+  /**
+   * Scroll to the song opened by a `#song-<id>` deep link once the list has
+   * loaded. The expansion itself comes from the `expandedId` initial value; this
+   * effect only moves the viewport, so it never calls setState.
+   */
+  useEffect(() => {
+    if (deepLinkScrolledRef.current || songs.length === 0) return;
+    const id = songIdFromHash();
+    if (!id) return;
+    deepLinkScrolledRef.current = true;
+    document.getElementById(`song-${id}`)?.scrollIntoView({ block: "start" });
+  }, [songs]);
 
   /** After creating a song, expand it so adding a recording is the next step. */
   const handleSongCreated = useCallback(
@@ -251,20 +281,22 @@ export default function AdminPage() {
         ) : (
           <div className="space-y-3">
             {songs.map((song) => (
-              <SongSection
-                key={song.id}
-                song={song}
-                musicians={musicians}
-                expanded={expandedId === song.id}
-                onToggle={() => toggle(song.id)}
-                onAddRecording={() => setRecordingSongId(song.id)}
-                onDeleted={() => void handleSongDeleted(song.id)}
-                openRecordingId={openRecordingId}
-                onOpenRecording={setOpenRecordingId}
-                onMusiciansChanged={refreshMusicians}
-                onChanged={reload}
-                notify={notify}
-              />
+              // The id anchors the deep link from /admin/recordings.
+              <div key={song.id} id={`song-${song.id}`} className="scroll-mt-8">
+                <SongSection
+                  song={song}
+                  musicians={musicians}
+                  expanded={expandedId === song.id}
+                  onToggle={() => toggle(song.id)}
+                  onAddRecording={() => setRecordingSongId(song.id)}
+                  onDeleted={() => void handleSongDeleted(song.id)}
+                  openRecordingId={openRecordingId}
+                  onOpenRecording={setOpenRecordingId}
+                  onMusiciansChanged={refreshMusicians}
+                  onChanged={reload}
+                  notify={notify}
+                />
+              </div>
             ))}
           </div>
         )}

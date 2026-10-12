@@ -23,6 +23,8 @@ D1 (parlband-db)
   └─ functions/api/content.ts GET /api/content (site_content → editable page copy)
        ├─ components/home/Hero.tsx     welcome line on the landing page
        └─ components/about/AboutView.tsx  heading + body on the Om oss view
+  └─ functions/api/settings.ts GET /api/settings (site_content.playback_mode → player)
+       └─ components/StickyPlayer.tsx  end-of-queue behaviour (none / once / loop)
   └─ functions/api/gigs.ts    GET /api/gigs    (upcoming gigs)
        └─ components/home/GigList.tsx  "Kommande spelningar"; renders nothing when empty
   └─ functions/api/admin/*    /api/admin/*   (CRUD + R2 uploads: mp3/wav/cover/pdf)
@@ -93,12 +95,15 @@ settings.
 
 - **recording_credits** – Join table for who played which instrument on a given recording (`recording_id`, `musician_id`, `instrument`).
 
-- **site_content** – Editable site copy as `key`/`value`:
-  `welcome_text` (the welcome line under the band members on the landing page),
-  `about_heading` and `about_body` (the heading and free text on the Om oss
-  view). All three are edited at `/admin/about`; the key/value shape keeps the
-  schema stable
-  when more editable copy is added.
+- **site_content** – Editable site copy and settings as `key`/`value`:
+  - **Copy**, edited at `/admin/about`: `welcome_text` (the welcome line under the
+    band members on the landing page), `about_heading` and `about_body` (the
+    heading and free text on the Om oss view).
+  - **Settings**, edited at `/admin/settings`: `playback_mode` (`none` | `once` |
+    `loop`, default `loop`) – the sticky player's end-of-queue behaviour, added in
+    `0010_site_settings.sql`.
+    The key/value shape keeps the schema stable when more copy or settings are
+    added.
 
 - **gigs** – The gig calendar ("Kommande spelningar"), edited at `/admin/gigs`.
   - `event_date`: ISO date (`YYYY-MM-DD`, text). `GET /api/gigs` only returns
@@ -166,6 +171,7 @@ dev:d1` the admin routes are open – that is expected.
 | `/api/admin/musicians`  | `GET`, `POST`, `PUT`           | List musicians for the dropdown; create one by name (idempotent) and rename one with `PUT`.                                                                |
 | `/api/admin/upload`     | `POST`                         | Proxy an mp3/wav/cover/pdf upload into R2 (see [UPLOADING.md](./UPLOADING.md)).                                                                            |
 | `/api/admin/content`    | `PUT`                          | Save the editable page copy into `site_content` (`welcome_text`, `about_heading`, `about_body`; read side is the public `GET /api/content`).               |
+| `/api/admin/settings`   | `PUT`                          | Save the site settings into `site_content` (`playback_mode`; read side is the public `GET /api/settings`).                                                 |
 | `/api/admin/gigs`       | `GET`, `POST`, `PUT`, `DELETE` | Gig calendar: list **every** date incl. past ones, create, update and delete one (validation in `gig-rules.ts`).                                           |
 
 - **mp3 existence:** `POST`/`PUT /api/admin/recordings` require `mp3_path` to be a

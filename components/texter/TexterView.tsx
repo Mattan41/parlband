@@ -103,9 +103,7 @@ export default function TexterView() {
       </p>
     );
   } else if (songs.length === 0) {
-    content = (
-      <p className="text-center text-zinc-500">Inga låttexter ännu.</p>
-    );
+    content = <p className="text-center text-zinc-500">Inga låttexter ännu.</p>;
   } else if (selectedSong) {
     const showChordToggle = hasChordLines(selectedSong.lyrics);
 

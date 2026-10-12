@@ -6,8 +6,10 @@ import { usePathname } from "next/navigation";
 /** Admin-area destinations. */
 const ADMIN_NAV_LINKS = [
   { href: "/admin", label: "Katalog" },
+  { href: "/admin/recordings", label: "Inspelningar" },
   { href: "/admin/gigs", label: "Spelningar" },
   { href: "/admin/about", label: "Om oss" },
+  { href: "/admin/settings", label: "Inställningar" },
 ] as const;
 
 /**
