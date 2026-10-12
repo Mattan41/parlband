@@ -107,6 +107,14 @@ export default function LyricsEditor({ value, onChange, idPrefix }: Props) {
           onClick={(event) => {
             if (event.target === event.currentTarget) collapse();
           }}
+          onKeyDown={(event) => {
+            // Keyboard equivalent of the backdrop click. Inside a modal dialog
+            // Escape belongs to the dialog (see the effect above), so it is left
+            // alone there; the visible "Stäng" button is always the way out.
+            if (event.key !== "Escape") return;
+            if (overlayRef.current?.closest("dialog")) return;
+            collapse();
+          }}
           className="fixed inset-0 z-50 flex flex-col bg-zinc-950/60 sm:p-6"
         >
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden border border-zinc-200 bg-white shadow-2xl dark:border-zinc-700 dark:bg-zinc-900 sm:rounded-2xl">

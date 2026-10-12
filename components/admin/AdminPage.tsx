@@ -32,7 +32,31 @@ export default function AdminPage({
   onRetry,
   footer,
   children,
-}: Props) {
+}: Readonly<Props>) {
+  // Resolved as a plain statement so the loading/error/content choice is not a
+  // nested ternary (kept readable and lint-clean).
+  let body: ReactNode;
+  if (loading) {
+    body = <p className="text-sm text-zinc-500 dark:text-zinc-400">Laddar…</p>;
+  } else if (error) {
+    body = (
+      <div className="flex flex-col items-start gap-2">
+        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+        {onRetry ? (
+          <button
+            type="button"
+            className={secondaryButtonClass}
+            onClick={onRetry}
+          >
+            Försök igen
+          </button>
+        ) : null}
+      </div>
+    );
+  } else {
+    body = children;
+  }
+
   return (
     <div className="min-h-full flex-1 bg-zinc-100 font-sans dark:bg-zinc-950">
       <main className="mx-auto w-full max-w-6xl px-4 py-8">
@@ -59,24 +83,7 @@ export default function AdminPage({
           <AdminNav />
         </div>
 
-        {loading ? (
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">Laddar…</p>
-        ) : error ? (
-          <div className="flex flex-col items-start gap-2">
-            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-            {onRetry ? (
-              <button
-                type="button"
-                className={secondaryButtonClass}
-                onClick={onRetry}
-              >
-                Försök igen
-              </button>
-            ) : null}
-          </div>
-        ) : (
-          children
-        )}
+        {body}
 
         {footer}
       </main>

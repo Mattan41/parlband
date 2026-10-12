@@ -34,7 +34,9 @@ const VISIBILITY_OPTIONS: { value: RecordingVisibility; label: string }[] = [
  * Cover thumbnail for one recording. Mirrors components/SongRow.tsx: a URL that
  * fails to load drops the image instead of showing a broken one.
  */
-function RecordingCover({ recording }: { recording: AdminRecording }) {
+function RecordingCover({
+  recording,
+}: Readonly<{ recording: AdminRecording }>) {
   const [failed, setFailed] = useState(false);
   const src = fileUrl("cover", recording.cover_path);
   if (!src || failed) return null;
@@ -62,7 +64,7 @@ export default function RecordingList({
   onChanged,
   onMusiciansChanged,
   notify,
-}: Props) {
+}: Readonly<Props>) {
   const [query, setQuery] = useState("");
   const [visibility, setVisibility] = useState<RecordingVisibility>("all");
   /** The single expanded recording card, or null when all are collapsed. */
@@ -95,11 +97,8 @@ export default function RecordingList({
           />
         </label>
 
-        <div
-          className="flex items-center gap-1"
-          role="group"
-          aria-label="Filter"
-        >
+        <fieldset className="flex items-center gap-1">
+          <legend className="sr-only">Filter</legend>
           {VISIBILITY_OPTIONS.map((option) => {
             const active = visibility === option.value;
             return (
@@ -118,7 +117,7 @@ export default function RecordingList({
               </button>
             );
           })}
-        </div>
+        </fieldset>
 
         <span className="pb-1 text-xs text-zinc-500 dark:text-zinc-400">
           {visible.length} av {entries.length}

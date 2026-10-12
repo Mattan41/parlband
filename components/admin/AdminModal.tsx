@@ -83,6 +83,11 @@ export default function AdminModal({
         // clicks on panel padding/borders never match this condition.
         if (event.target === event.currentTarget && !busy) onClose();
       }}
+      onKeyDown={(event) => {
+        // Keyboard equivalent of the backdrop click: Escape closes the modal,
+        // unless a save/upload is running (which blocks the click too).
+        if (event.key === "Escape" && !busy) onClose();
+      }}
       className="mt-auto mb-0 w-full max-w-3xl bg-transparent p-0 outline-none backdrop:bg-zinc-950/60 sm:m-auto"
     >
       <div className="flex max-h-[90dvh] flex-col overflow-hidden rounded-t-2xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-700 dark:bg-zinc-900 sm:rounded-2xl">

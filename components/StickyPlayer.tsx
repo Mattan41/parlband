@@ -274,6 +274,17 @@ export default function StickyPlayer() {
     setSleeveOpen(false);
   };
 
+  /**
+   * Keyboard equivalent of the background tap: with focus inside the player bar
+   * (on one of the controls), Escape folds the sleeve, so the dismiss action is
+   * reachable without a mouse.
+   */
+  const dismissSleeveOnEscape = (
+    event: React.KeyboardEvent<HTMLDivElement>
+  ) => {
+    if (event.key === "Escape" && sleeveOpen) setSleeveOpen(false);
+  };
+
   // One transport strip is shared by both states, so play/pause and skip keep
   // the same size and order whether or not the sleeve is open.
   const playButton = (
@@ -359,6 +370,7 @@ export default function StickyPlayer() {
         currentSong ? "" : "hidden"
       }`}
       onClick={dismissSleeveOnBackgroundClick}
+      onKeyDown={dismissSleeveOnEscape}
     >
       <audio ref={audioRef} src={src} preload="metadata" />
 
