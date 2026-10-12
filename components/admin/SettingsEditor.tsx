@@ -46,7 +46,7 @@ function settingsEqual(a: SiteSettings, b: SiteSettings): boolean {
  * GET /api/settings, so there is no separate admin GET. The draft is seeded once
  * – after a save it becomes the new baseline, so the button disables again.
  */
-export default function SettingsEditor({ initialSettings }: Props) {
+export default function SettingsEditor({ initialSettings }: Readonly<Props>) {
   const [draft, setDraft] = useState<SiteSettings>(initialSettings);
   const [saved, setSaved] = useState<SiteSettings>(initialSettings);
   const [saving, setSaving] = useState(false);
@@ -100,13 +100,13 @@ export default function SettingsEditor({ initialSettings }: Props) {
           <div className="mt-2 space-y-2">
             {PLAYBACK_MODES.map((mode) => {
               const option = PLAYBACK_MODE_OPTIONS[mode];
-              const id = `playback-mode-${mode}`;
               const checked = draft.playbackMode === mode;
 
+              // The wrapping <label>, not an explicit htmlFor, associates the
+              // radio with its text (same implicit pattern as the other editors).
               return (
                 <label
                   key={mode}
-                  htmlFor={id}
                   className={`flex cursor-pointer items-start gap-3 rounded-md border px-3 py-2 transition ${
                     checked
                       ? "border-amber-400 bg-amber-50 dark:border-amber-500/70 dark:bg-amber-500/10"
@@ -114,7 +114,6 @@ export default function SettingsEditor({ initialSettings }: Props) {
                   }`}
                 >
                   <input
-                    id={id}
                     type="radio"
                     name="playbackMode"
                     value={mode}
