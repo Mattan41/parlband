@@ -1,52 +1,73 @@
 # Pärlband
 
-The official website for the band **Pärlband** – music, lyrics and chords.
+The official website for the band **Pärlband** – songs, lyrics, chords and gigs,
+built as a Next.js static export and served from Cloudflare Pages.
 
-The site is a Next.js **static export** deployed to Cloudflare Pages. Everything
-dynamic is provided by Cloudflare:
+**Live:** <https://parlband.kruskopf.org>
 
-- **Pages Functions** (`functions/api/*`) serve the JSON API.
-- **D1** (`parlband-db`) stores songs, recordings, credits and play counts.
-- **R2** (`kruskopf-cdn`, custom domain `cdn.kruskopf.org`) stores audio, cover
-  images and sheet music PDFs.
+## Status
 
-There is no server-side Next.js runtime: `next build` emits static HTML/CSS/JS into
-`out/`, and Pages Functions handle `/api/*`.
+Hobby / portfolio project. It is the band's real public site **and** a deliberate
+exercise to sharpen React + Next.js skills for the job market, so it is under
+active development – copy, features and the admin tooling still change. There are
+no user accounts: the public side is read-only, and the admin tools are gated by
+Cloudflare Access.
 
-## Tech Stack
+## Tech stack
 
-- [Next.js](https://nextjs.org) 16 (App Router, static export)
+- [Next.js](https://nextjs.org) 16 (App Router, `output: "export"`) + React 19
 - [TypeScript](https://www.typescriptlang.org/)
 - [Tailwind CSS](https://tailwindcss.com/) v4
-- [Zustand](https://zustand.docs.pmnd.rs/) (global player state)
+- [Zustand](https://zustand.docs.pmnd.rs/) for the global player state
 - PWA – hand-rolled web app manifest + service worker (installable, offline app shell)
-- Cloudflare Pages + Functions + D1 + R2
+- Backend – Cloudflare Pages Functions + D1 (database) + R2 (media); no Next.js server
+- Tooling – Vitest, ESLint + Prettier
 
-## Requirements
+## Features
 
-- Node.js 20+ (developed on Node 24)
-- [Wrangler](https://developers.cloudflare.com/workers/wrangler/) (`npx wrangler` works too)
-- Access to the Cloudflare account that owns the `parlband-db` D1 database and the
-  `kruskopf-cdn` R2 bucket (for deploys and remote data changes)
+- **Player** – a sticky, app-wide audio player (a single `<audio>` element), a
+  queue, a track sleeve with credits, and automatic play counting after 5 s.
+- **Texter / ackord** – lyrics and chords per song, with a chord/text mode switch.
+- **Lyssna** – the song list with cover art, streaming links and a WAV download
+  (click-counted).
+- **Spelningar** – upcoming gigs; the block hides itself while the calendar is empty.
+- **Om oss** – editable band copy, contact address and streaming links.
+- **Admin** – catalogue, gig and copy editors at `/admin*`, behind Cloudflare Access.
+- **PWA** – installable on desktop and mobile, with an offline app shell.
+- **Static export** – the whole front end ships as static HTML/CSS/JS; everything
+  dynamic comes from the `/api/*` Functions.
 
-## Getting Started
+## Getting started
+
+Requires **Node.js 20+** (developed on Node 24) and access to the Cloudflare
+account that owns the `parlband-db` D1 database and the `kruskopf-cdn` R2 bucket
+(for deploys and remote data changes). [`npx wrangler`](https://developers.cloudflare.com/workers/wrangler/)
+serves the local API.
 
 ```bash
 npm install
 npm run dev:d1
 ```
 
-`dev:d1` runs `next dev` on port 3000 with `wrangler pages dev` (port 8788)
-proxying to it, so the UI **and** `/api/*` Functions work with hot reload.
+`dev:d1` runs `next dev` (port 3000) with `wrangler pages dev` (port 8788)
+proxying to it, so the UI **and** the `/api/*` Functions both work with hot
+reload. This is the mode to use for everyday development.
 
-> Plain `npm run dev` only starts `next dev`. The Functions are not served, so the
+> Plain `npm run dev` starts only `next dev` – the Functions are not served, so the
 > landing page shows "Kunde inte ladda låtarna just nu." instead of the song list.
 
-The local database:
+To exercise a production build (and the service worker, which is skipped outside
+production), use:
+
+```bash
+npm run preview   # next build + wrangler pages dev out
+```
+
+The local database is versioned and seeded through Wrangler:
 
 ```bash
 npm run db:migrate   # apply new files in migrations/ to the local D1 database
-npm run db:reset     # wipe local D1, re-apply the schema and seeds.sql
+npm run db:reset     # wipe local D1, re-apply the schema + seeds.sql
 ```
 
 ## Scripts
@@ -65,77 +86,17 @@ npm run db:reset     # wipe local D1, re-apply the schema and seeds.sql
 | `npm test`           | Vitest unit tests (`test:watch` for watch mode)       |
 | `npm run clean`      | Remove `.next`, `dist`, `out`, `build`                |
 
-## Project Structure
+## Configuration
 
-```
-app/                 App Router routes
-  layout.tsx         root layout: fonts, metadata, <StickyPlayer>, SW registration
-  page.tsx           / – the whole public SPA (Lyssna/Texter/Om oss views; ?view=/?song=)
-  admin/page.tsx     /admin – catalogue editor (Cloudflare Access)
-  admin/gigs/page.tsx      /admin/gigs – gig calendar editor
-  admin/about/page.tsx     /admin/about – editor for the welcome text + "Om oss"
-  icon.png           app/favicon icon, served at /icon.png (rendered from public/pwa-icon.svg)
-  robots.ts          /robots.txt (static export)
-  sitemap.ts         /sitemap.xml (static export)
-components/          shared UI (PublicShell, SiteNav, publicView.ts, StreamingLinks, SongRow, StickyPlayer,
-                     TrackSleeve, ServiceWorkerRegistrar, iconButton.ts, songCredits.ts) + home/, about/,
-                     texter/, admin/ (about/ holds InstallAppCard.tsx + its installApp.ts helpers;
-                     texter/ holds TexterView.tsx + lyricsLines.ts)
-data/                API types and helpers (songs.ts, gigs.ts, content.ts, admin.ts, siteLinks.ts)
-store/               Zustand player state (playerStore.ts)
-functions/api/       Pages Functions: songs, plays, downloads, content, gigs, admin CRUD + upload
-  admin/_middleware.ts  Cloudflare Access JWT guard for /api/admin/*
-public/
-  manifest.json      PWA web app manifest (related_applications for getInstalledRelatedApps)
-  sw.js              service worker (offline app shell; never caches the R2 CDN)
-  icons/             192/512 px PWA icons + maskable variant
-  pwa-icon.svg       vector source for the icons
-migrations/          versioned D1 schema
-tests/               Vitest unit tests (Access JWT guard, gigs, content rules, download URL,
-                     musician overview, publication flags, mp3/sheet-music upload rules)
-docs/                DATABASE.md, UPLOADING.md, ADMIN.md, PWA.md, PLAYER.md, ARCHITECTURE.md
-```
+Copy `.dev.vars.example` to the git-ignored `.dev.vars` before running the
+Functions locally.
 
-## Routes
-
-| Route          | Description                                                                             |
-| -------------- | --------------------------------------------------------------------------------------- |
-| `/`            | The public SPA: Lyssna + Texter (`?view=texter`, `?song=<id>`) + Om oss (`?view=about`) |
-| `/admin`       | Admin/editor UI, protected by Cloudflare Access                                         |
-| `/admin/gigs`  | Gig calendar editor, protected by Cloudflare Access                                     |
-| `/admin/about` | Editor for the welcome text and the Om oss view, Cloudflare Access                      |
-
-`/texter` and `/about` are no longer routes. They 301-redirect to `/` via
-`public/_redirects` (a `?song=` query string survives the redirect) and
-`app/page.tsx` picks the view from the query string. See
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
-
-## PWA / installability
-
-The site is installable as a standalone app and keeps its app shell available
-offline. There is no `next-pwa` dependency: with the App Router and a static
-export, a hand-rolled `public/manifest.json` plus a small `public/sw.js` is
-simpler and more predictable than a plugin's caching heuristics. Registration is
-handled by `components/ServiceWorkerRegistrar.tsx` (production only).
-
-- **Cache-first** for the hashed app shell (`/_next/static/*`, icons, manifest).
-- **Network-first** for navigations, with a cached fallback when offline.
-- **Never cached:** `/api/*` and everything from the R2 CDN
-  (`cdn.kruskopf.org`, `/parlband/mp3/`, `/parlband/wav/`, cover images), so
-  replaced audio is never served stale.
-
-See [docs/PWA.md](docs/PWA.md) for the file map, the local testing checklist, how
-to re-render the icons, and how to clear stale state (an old `out/`, the service
-worker or `.next`) when a change seems to be missing while verifying a UI tweak.
-
-## Environment
-
-| Variable                     | Used by            | Purpose                                                                                                   |
-| ---------------------------- | ------------------ | --------------------------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_AUDIO_BASE_URL` | client + Functions | CDN base URL, e.g. `https://cdn.kruskopf.org`                                                             |
-| `CF_ACCESS_TEAM_DOMAIN`      | Functions          | Access team domain, e.g. `https://<team>.cloudflareaccess.com`; normalized and used as the expected `iss` |
-| `CF_ACCESS_AUD`              | Functions          | Access Application Audience (AUD) tag protecting `/admin*` + `/api/admin*`                                |
-| `NODE_ENV`                   | Functions (local)  | `development` in `.dev.vars` to skip JWT validation locally                                               |
+| Variable                     | Used by            | Purpose                                                             |
+| ---------------------------- | ------------------ | ------------------------------------------------------------------- |
+| `NEXT_PUBLIC_AUDIO_BASE_URL` | client + Functions | CDN base URL, e.g. `https://cdn.kruskopf.org`                       |
+| `CF_ACCESS_TEAM_DOMAIN`      | Functions          | Access team domain; normalized and used as the expected `iss` claim |
+| `CF_ACCESS_AUD`              | Functions          | Access Audience (AUD) tag for `/admin*` + `/api/admin*`             |
+| `NODE_ENV`                   | Functions (local)  | `development` in `.dev.vars` to skip JWT validation locally         |
 
 Cloudflare bindings, declared in `wrangler.toml` and typed in `functions/types.d.ts`:
 
@@ -144,62 +105,35 @@ Cloudflare bindings, declared in `wrangler.toml` and typed in `functions/types.d
 | `DB`    | D1   | `parlband-db`  |
 | `CDN`   | R2   | `kruskopf-cdn` |
 
-When deploying through the Cloudflare Pages dashboard, the same bindings must also
-be configured under the project's settings.
+Where each value is set, how `wrangler.toml` handles `vars` across preview and
+production, how the admin Access JWT is validated, and how the site deploys are all
+covered in [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 
-`CF_ACCESS_TEAM_DOMAIN` and `CF_ACCESS_AUD` are set in `wrangler.toml` in **two**
-places, because `vars` is a
-[non-inheritable key](https://developers.cloudflare.com/pages/functions/wrangler-configuration/#non-inheritable-keys):
-the top-level `[vars]` covers local development and preview deployments, and
-`[env.production.vars]` covers production. Both carry the same values – there is
-only one Access application – and preview needs no `[env.preview]` block.
+## Project structure
 
-### Admin API authentication
+```
+app/            App Router routes – / (public SPA), /admin*, robots, sitemap
+components/     UI, grouped by view (home/, about/, texter/) + shared + admin/
+data/           typed API shapes + fetch helpers, one file per resource
+store/          Zustand player state
+functions/api/  Cloudflare Pages Functions – the actual backend
+public/         static assets + the PWA shell (manifest.json, sw.js, icons/)
+migrations/     versioned D1 schema
+tests/          Vitest unit tests
+docs/           feature documentation (see below)
+```
 
-Cloudflare Access is the primary gate for `/admin*` and `/api/admin*`. As defense
-in depth, `functions/api/admin/_middleware.ts` also validates the Access JWT on
-every `/api/admin/*` request (all routes in the directory, including
-subdirectories):
-
-- Token source: the `Cf-Access-Jwt-Assertion` header.
-- Verification: signature, issuer, audience and expiry via
-  `createRemoteJWKSet` + `jwtVerify` from [`jose`](https://github.com/panva/jose),
-  with `RS256` pinned. JWKS:
-  `https://<CF_ACCESS_TEAM_DOMAIN>/cdn-cgi/access/certs`.
-- On any failure the route never runs and the API returns
-  `401 { "error": "Unauthorized" }`. The token is never logged.
-- The verified identity is exposed to routes as `context.data.access.email`
-  (read it with `getAccessIdentity(context.data)?.email`) so a route can log who
-  made a change.
-
-Locally the guard is **skipped** only when both `NODE_ENV=development` and a
-`localhost` request URL are present – never because of a request header or query
-parameter. Copy `.dev.vars.example` to the git-ignored `.dev.vars` and use
-`http://localhost:8788`; a `127.0.0.1` URL is treated as remote and will return
-`401`. When `.dev.vars` exists, `wrangler pages dev` no longer loads `.env`, which
-is why the example repeats `NEXT_PUBLIC_AUDIO_BASE_URL`.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full folder map and the
+decisions behind it.
 
 ## Documentation
 
-- [docs/DATABASE.md](docs/DATABASE.md) – schema, API response and data flow
-- [docs/UPLOADING.md](docs/UPLOADING.md) – R2 file conventions, CLI uploads, Access
-- [docs/ADMIN.md](docs/ADMIN.md) – what you can do in the admin UI
-- [docs/PWA.md](docs/PWA.md) – manifest, service worker, install/offline testing
-- [docs/PLAYER.md](docs/PLAYER.md) – the sticky player: state, playback and UI rules
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) – the structural decisions behind the app
-
-## Deployment
-
-The site deploys as a static site on Cloudflare Pages, which picks up `functions/`
-automatically. `/admin*` and `/api/admin*` are protected by Cloudflare Access – both
-destinations are required, since protecting only the UI would leave the write
-endpoints open. Access runs at the edge, so it is not enforced by local
-`wrangler pages dev` (expected, not a bug); the app-level JWT check described in
-[Admin API authentication](#admin-api-authentication) is skipped there too.
-
-A single Access application covers production and preview deployments, so
-`CF_ACCESS_TEAM_DOMAIN` and `CF_ACCESS_AUD` have one set of values. They appear in
-both `[vars]` and `[env.production.vars]` in `wrangler.toml`; if the project is
-instead configured from the dashboard, set the same two variables for both the
-Preview and Production environments there – see
-[Environment](#environment).
+| Doc                                       | Covers                                                                                      |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------- |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md)   | Structural decisions: static export, the single-route SPA, folder layout, where state lives |
+| [CONFIGURATION.md](docs/CONFIGURATION.md) | Environment variables, Cloudflare bindings, admin Access/JWT auth and deployment            |
+| [DATABASE.md](docs/DATABASE.md)           | D1 schema, API responses and data flow                                                      |
+| [ADMIN.md](docs/ADMIN.md)                 | What you can do in the admin UI                                                             |
+| [UPLOADING.md](docs/UPLOADING.md)         | R2 file conventions, CLI uploads, Access                                                    |
+| [PLAYER.md](docs/PLAYER.md)               | The sticky player: state, playback and UI rules                                             |
+| [PWA.md](docs/PWA.md)                     | Manifest, service worker, install/offline testing                                           |

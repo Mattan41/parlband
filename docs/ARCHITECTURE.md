@@ -84,7 +84,8 @@ functions/api/               Cloudflare Pages Functions — the actual backend
 public/                      static assets + the PWA shell (manifest.json, sw.js, icons/)
 migrations/                  versioned D1 schema
 tests/                       Vitest unit tests — pure helpers only, no component tests
-docs/                        one file per feature: DATABASE, UPLOADING, ADMIN, PWA, PLAYER + ARCHITECTURE
+docs/                        one file per feature: DATABASE, UPLOADING, ADMIN, PWA, PLAYER
+                             + ARCHITECTURE and CONFIGURATION
 ```
 
 **Grouping convention:** components are grouped by which public view they
