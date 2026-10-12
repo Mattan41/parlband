@@ -34,8 +34,8 @@ Cloudflare Access.
   (click-counted).
 - **Spelningar** – upcoming gigs; the block hides itself while the calendar is empty.
 - **Om oss** – editable band copy, contact address and streaming links.
-- **Admin** – catalogue, gig, copy and settings editors at `/admin*`, behind
-  Cloudflare Access.
+- **Admin** – catalogue, recordings, gig, copy and settings editors at `/admin*`,
+  behind Cloudflare Access.
 - **PWA** – installable on desktop and mobile, with an offline app shell.
 - **Static export** – the whole front end ships as static HTML/CSS/JS; everything
   dynamic comes from the `/api/*` Functions.

@@ -170,6 +170,70 @@ export async function fetchAdminData(): Promise<AdminData> {
   return { songs: songsData.songs, musicians: musiciansData.musicians };
 }
 
+/** One recording paired with the song it belongs to. */
+export interface RecordingEntry {
+  song: AdminSong;
+  recording: AdminRecording;
+}
+
+/** Visibility buckets offered by the recordings view's filter. */
+export type RecordingVisibility = "all" | "public" | "hidden";
+
+/** Newest year first; missing years sort last. Primary/public takes win ties. */
+function compareRecordings(a: AdminRecording, b: AdminRecording): number {
+  if (a.is_primary !== b.is_primary) return b.is_primary - a.is_primary;
+  if (a.is_public !== b.is_public) return b.is_public - a.is_public;
+  return (b.year ?? 0) - (a.year ?? 0);
+}
+
+/**
+ * Flatten every song's recordings into one list for the /admin/recordings view.
+ * Ordered by song title and then with each song's primary/public and newest
+ * takes first, so one song's recordings always sit together.
+ *
+ * Pure and store-independent so it can be unit-tested.
+ */
+export function flattenRecordings(songs: AdminSong[]): RecordingEntry[] {
+  return songs
+    .slice()
+    .sort((a, b) => a.title.localeCompare(b.title, "sv"))
+    .flatMap((song) =>
+      song.recordings
+        .slice()
+        .sort(compareRecordings)
+        .map((recording) => ({ song, recording }))
+    );
+}
+
+/**
+ * Filter the flattened recordings for the search box and the visibility toggle.
+ * `query` matches the song title, album, studio and musician names
+ * (case-insensitive). Pure, so it can be unit-tested.
+ */
+export function filterRecordings(
+  entries: RecordingEntry[],
+  options: { query?: string; visibility?: RecordingVisibility } = {}
+): RecordingEntry[] {
+  const query = (options.query ?? "").trim().toLowerCase();
+  const visibility = options.visibility ?? "all";
+
+  return entries.filter(({ song, recording }) => {
+    if (visibility === "public" && recording.is_public !== 1) return false;
+    if (visibility === "hidden" && recording.is_public !== 0) return false;
+    if (query === "") return true;
+
+    const haystack = [
+      song.title,
+      recording.album ?? "",
+      recording.studio ?? "",
+      ...recording.credits.map((credit) => credit.musician),
+    ]
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(query);
+  });
+}
+
 /**
  * Upload a file as the raw request body (streamed straight into R2 by the
  * Worker). When `recordingId` is given the endpoint also points the matching

@@ -11,10 +11,10 @@ Recordings are a nested accordion under the song, and a collapsed recording row
 shows its year/album, status badges and both counters.
 
 The admin area has its own top navigation – **Katalog** (`/admin`),
-**Spelningar** (`/admin/gigs`), **Om oss** (`/admin/about`) and
-**Inställningar** (`/admin/settings`) – rendered on every admin page
-(`components/admin/AdminNav.tsx`). It is separate from the public
-`components/SiteNav.tsx`, which links the public pages. The public
+**Inspelningar** (`/admin/recordings`), **Spelningar** (`/admin/gigs`),
+**Om oss** (`/admin/about`) and **Inställningar** (`/admin/settings`) – rendered
+on every admin page (`components/admin/AdminNav.tsx`). It is separate from the
+public `components/SiteNav.tsx`, which links the public pages. The public
 heading of the gig section is **Kommande spelningar**; the nav pill keeps the
 shorter **Spelningar**.
 
@@ -127,6 +127,23 @@ A song can have several recordings (e.g. studio + live).
   counter can be edited by hand.
 - **Delete** removes the row and its credits, but leaves the R2 files in the
   bucket. This is intentional: storage is cheap and it avoids accidental data loss.
+
+## Inspelningar (vy)
+
+- **Inspelningar** in the admin nav opens `/admin/recordings`, a **flat list of
+  every recording** across all songs. It exists because reaching a recording in
+  Katalog means expanding the song and scrolling past its Låtinfo form – awkward
+  on a phone. Here each recording sits on its own row.
+- It reuses the same data (`GET /api/admin/songs`) and the same
+  `components/admin/RecordingCard.tsx` as Katalog, so a recording is edited
+  identically in both places; only the song-level fields (text, noter,
+  **Publicerad**) stay in Katalog. Each row shows its song title (with an
+  **Utkast** badge for an unpublished song) and a **Redigera låten i Katalog ↗**
+  link that opens `/admin#song-<id>` with that song expanded.
+- A **search box** filters by song title, album, studio and musician; an
+  **Alla / Publika / Dolda** toggle filters by `is_public`. A counter shows how
+  many of the total are currently visible.
+- Creating a new recording and editing the song itself remain in **Katalog**.
 
 ## Feedback and errors
 
