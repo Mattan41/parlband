@@ -1,31 +1,10 @@
+import { nullableText, optionalBoolean, requiredText } from "./validation";
+
 /** ISO calendar date, e.g. `2026-10-04`. */
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 /** 24-hour time on the hour or minute, e.g. `19:00`. */
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
-
-/** Trimmed non-empty string, or undefined when the value is unusable. */
-export function requiredText(value: unknown): string | undefined {
-  if (typeof value !== "string") return undefined;
-  const trimmed = value.trim();
-  return trimmed === "" ? undefined : trimmed;
-}
-
-/** Optional text: null for missing/empty, undefined when the type is wrong. */
-export function nullableText(value: unknown): string | null | undefined {
-  if (value === undefined || value === null) return null;
-  if (typeof value !== "string") return undefined;
-  const trimmed = value.trim();
-  return trimmed === "" ? null : trimmed;
-}
-
-/** Positive integer, or undefined when the value is unusable. */
-export function requiredInteger(value: unknown): number | undefined {
-  if (typeof value !== "number" || !Number.isInteger(value) || value <= 0) {
-    return undefined;
-  }
-  return value;
-}
 
 /** True for a real calendar date in `YYYY-MM-DD` form (rejects `2026-02-31`). */
 export function isValidDate(value: string): boolean {
@@ -53,21 +32,6 @@ export function isValidHttpUrl(value: string): boolean {
   } catch {
     return false;
   }
-}
-
-/**
- * Optional boolean with a fallback for missing values, mirroring
- * functions/api/admin/recordings.ts. Returns undefined only when a value is
- * present but has the wrong type, so a bad payload is rejected instead of
- * silently falling back.
- */
-function optionalBoolean(
-  value: unknown,
-  fallback: boolean
-): boolean | undefined {
-  if (value === undefined || value === null) return fallback;
-  if (typeof value !== "boolean") return undefined;
-  return value;
 }
 
 /** Validated gig payload in the shape the SQL statements bind. */

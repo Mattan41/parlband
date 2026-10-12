@@ -1,4 +1,6 @@
-import { parseGigFields, requiredInteger } from "./gig-rules";
+import { parseGigFields } from "./gig-rules";
+import { badRequest, readJsonBody } from "./request";
+import { requiredInteger } from "./validation";
 
 interface Env {
   DB: D1Database;
@@ -23,23 +25,6 @@ interface GigRow {
   internal_notes: string | null;
   /** 1 when the gig is visible on the public site, 0 when it is a draft. */
   is_published: number;
-}
-
-async function readJsonBody<T>(request: Request): Promise<T | null> {
-  try {
-    return await request.json<T>();
-  } catch {
-    return null;
-  }
-}
-
-/**
- * `code` is optional, but every validation failure from gig-rules.ts carries a
- * stable one so components/admin/GigsSection.tsx can render Swedish copy
- * instead of the English API message.
- */
-function badRequest(error: string, code?: string): Response {
-  return Response.json(code ? { error, code } : { error }, { status: 400 });
 }
 
 /** A row that no longer exists; the UI reloads and says so in Swedish. */

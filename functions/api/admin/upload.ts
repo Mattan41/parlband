@@ -1,3 +1,5 @@
+import { badRequest } from "./request";
+
 /** Song id slug: lowercase ASCII words separated by single hyphens. */
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -76,10 +78,6 @@ const IMAGE_EXTENSIONS: Record<string, string> = {
   "image/avif": "avif",
   "image/gif": "gif",
 };
-
-function badRequest(error: string): Response {
-  return Response.json({ error }, { status: 400 });
-}
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const url = new URL(context.request.url);

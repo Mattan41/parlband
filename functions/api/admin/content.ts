@@ -1,4 +1,5 @@
 import { parseContentFields } from "./content-rules";
+import { readJsonBody } from "./request";
 
 interface Env {
   DB: D1Database;
@@ -10,14 +11,6 @@ const CONTENT_KEYS = {
   aboutHeading: "about_heading",
   aboutBody: "about_body",
 } as const;
-
-async function readJsonBody<T>(request: Request): Promise<T | null> {
-  try {
-    return await request.json<T>();
-  } catch {
-    return null;
-  }
-}
 
 /** One upsert per key; the table is key/value, so new copy needs no migration. */
 function upsert(db: D1Database, key: string, value: string) {
