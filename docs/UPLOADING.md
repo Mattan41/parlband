@@ -56,9 +56,14 @@ Content-Type: <the file's content type>
 - A PDF belongs to the **song**, not the recording: it is stored as
   `<song_id>.pdf` and written to `songs.sheet_music_path` (no `recording_id`
   needed). The song must already exist, otherwise the endpoint returns `404`.
-- Size limits: mp3 25 MB, cover 10 MB, wav 50 MB, pdf 20 MB. The WAV limit keeps
-  the upload inside the Worker's memory ceiling while streaming; larger masters
-  need the CLI below (or a future multipart upload).
+- Size limits (`KIND_CONFIG` in `functions/api/admin/upload-rules.ts`): mp3
+  95 MB, wav 95 MB, cover 10 MB, pdf 20 MB. The audio ceiling is **Cloudflare's**,
+  not ours: a request body is capped at 100 MB on the Free and Pro plans (200 MB
+  on Business, up to 5 GB on Enterprise) and anything larger is refused with
+  `413` at the edge, before the Function runs. Staying just under that cap keeps
+  this endpoint, rather than the edge, the one explaining the refusal. Larger
+  masters need the CLI below, which accepts up to 315 MB per object (or a future
+  multipart / browser direct-to-R2 upload).
 - The returned URL uses `NEXT_PUBLIC_AUDIO_BASE_URL`, so the same file is
   immediately reachable at `https://cdn.kruskopf.org/parlband/...`.
 - The API only stores the file and updates the row; a recording whose `mp3_path`

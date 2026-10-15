@@ -1,66 +1,15 @@
 import { badRequest } from "./request";
+import {
+  IMAGE_EXTENSIONS,
+  KIND_CONFIG,
+  exceedsUploadLimit,
+  parseContentLength,
+  uploadLimitMb,
+  type UploadKind,
+} from "./upload-rules";
 
 /** Song id slug: lowercase ASCII words separated by single hyphens. */
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
-type UploadKind = "mp3" | "wav" | "cover" | "pdf";
-
-interface UploadKindConfig {
-  /** R2 key prefix, matching the existing parlband/ convention. */
-  prefix: string;
-  /** File extension, or null when it is derived from the content type. */
-  extension: string | null;
-  maxBytes: number;
-  contentTypes: string[];
-}
-
-const KIND_CONFIG: Record<UploadKind, UploadKindConfig> = {
-  mp3: {
-    prefix: "parlband/mp3",
-    extension: "mp3",
-    // Kept conservative: the request body is streamed straight into R2, and the
-    // isolate has a hard memory ceiling that multipart-free streaming avoids but
-    // cannot exceed either.
-    maxBytes: 25 * 1024 * 1024,
-    contentTypes: [
-      "audio/mpeg",
-      "audio/mp3",
-      "audio/x-mp3",
-      "application/octet-stream",
-    ],
-  },
-  wav: {
-    prefix: "parlband/wav",
-    extension: "wav",
-    maxBytes: 50 * 1024 * 1024,
-    contentTypes: [
-      "audio/wav",
-      "audio/wave",
-      "audio/x-wav",
-      "audio/vnd.wave",
-      "application/octet-stream",
-    ],
-  },
-  cover: {
-    prefix: "parlband/images",
-    extension: null,
-    maxBytes: 10 * 1024 * 1024,
-    contentTypes: [
-      "image/jpeg",
-      "image/png",
-      "image/webp",
-      "image/avif",
-      "image/gif",
-    ],
-  },
-  pdf: {
-    prefix: "parlband/pdf",
-    extension: "pdf",
-    // Sheet music/chords are small, print-ready documents.
-    maxBytes: 20 * 1024 * 1024,
-    contentTypes: ["application/pdf"],
-  },
-};
 
 /** `bytes` random bytes as lowercase hex (used to make upload keys unique). */
 function randomHex(bytes: number): string {
@@ -70,14 +19,6 @@ function randomHex(bytes: number): string {
     .map((value) => value.toString(16).padStart(2, "0"))
     .join("");
 }
-
-const IMAGE_EXTENSIONS: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-  "image/avif": "avif",
-  "image/gif": "gif",
-};
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const url = new URL(context.request.url);
@@ -113,13 +54,15 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     return badRequest(`Unsupported content type '${contentType}' for ${kind}`);
   }
 
-  // Content-Length is present for normal browser uploads; a missing header (e.g.
-  // a chunked request) simply skips this guard.
-  const contentLength = Number(context.request.headers.get("content-length"));
-  if (Number.isFinite(contentLength) && contentLength > config.maxBytes) {
+  // Content-Length is present for normal browser uploads; a missing or unusable
+  // header (e.g. a chunked request) simply skips this guard.
+  const contentLength = parseContentLength(
+    context.request.headers.get("content-length")
+  );
+  if (contentLength !== null && exceedsUploadLimit(kind, contentLength)) {
     return Response.json(
       {
-        error: `File is larger than the ${Math.round(config.maxBytes / 1024 / 1024)} MB limit for ${kind}`,
+        error: `File is larger than the ${uploadLimitMb(kind)} MB limit for ${kind}`,
       },
       { status: 413 }
     );
