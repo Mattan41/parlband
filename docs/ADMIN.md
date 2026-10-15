@@ -168,10 +168,15 @@ separate save is needed for the file.
 
 | Button                | Kind    | R2 prefix          | Stored as                                       | Limit |
 | --------------------- | ------- | ------------------ | ----------------------------------------------- | ----- |
-| Ladda upp MP3         | `mp3`   | `parlband/mp3/`    | `<song-id>-<8 hex>.mp3`                         | 25 MB |
-| Ladda upp WAV         | `wav`   | `parlband/wav/`    | `<song-id>-<8 hex>.wav`                         | 50 MB |
+| Ladda upp MP3         | `mp3`   | `parlband/mp3/`    | `<song-id>-<8 hex>.mp3`                         | 95 MB |
+| Ladda upp WAV         | `wav`   | `parlband/wav/`    | `<song-id>-<8 hex>.wav`                         | 95 MB |
 | Ladda upp omslag      | `cover` | `parlband/images/` | `<song-id>-<8 hex>.<jpg\|png\|webp\|avif\|gif>` | 10 MB |
 | Ladda upp noter (PDF) | `pdf`   | `parlband/pdf/`    | `<song-id>.pdf`                                 | 20 MB |
+
+- The **audio limit (95 MB)** is Cloudflare's, not the app's: a request body over
+  **100 MB** is rejected at the edge on the Free and Pro plans (`413`), before the
+  Function runs. Bigger masters go through the CLI (`wrangler r2 object put`,
+  up to 315 MB) – see [UPLOADING.md](./UPLOADING.md).
 
 - In the **new recording** modal an upload fills in the path field but cannot
   link the file yet – press "Skapa inspelning" to store the recording.
