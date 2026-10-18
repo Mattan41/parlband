@@ -8,14 +8,21 @@ interface Env {
 /** `site_content` key written by this endpoint (see data/settings.ts). */
 const PLAYBACK_MODE_KEY = "playback_mode";
 
-/** One upsert; the table is key/value, so new settings need no migration. */
+/**
+ * One upsert; the table is key/value, so new settings need no migration.
+ *
+ * `.run()` is what executes the statement: `bind()` only hands back a prepared
+ * statement, and awaiting that without calling `run()`/`first()`/`all()`/`raw()`
+ * resolves immediately without touching D1.
+ */
 function upsert(db: D1Database, key: string, value: string) {
   return db
     .prepare(
       `INSERT INTO site_content (key, value) VALUES (?, ?)
        ON CONFLICT(key) DO UPDATE SET value = excluded.value`
     )
-    .bind(key, value);
+    .bind(key, value)
+    .run();
 }
 
 /**
