@@ -15,6 +15,8 @@ interface SongRow {
   sheet_music_path: string | null;
   /** 1 when the song is visible on the public site, 0 when it is a draft. */
   is_published: number;
+  /** Position in the public playlist (1 = first); 0 before it has been placed. */
+  sort_order: number;
 }
 
 interface RecordingRow {
@@ -74,7 +76,9 @@ async function checkSheetMusicPath(
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   try {
     const songsResult = await context.env.DB.prepare(
-      `SELECT id, title, artist, lyrics_by, music_by, lyrics, sheet_music_path, is_published
+      // Ordered by title for the catalogue views; `sort_order` is returned so
+      // /admin/playlist can render (and reorder) the public playlist order.
+      `SELECT id, title, artist, lyrics_by, music_by, lyrics, sheet_music_path, is_published, sort_order
        FROM songs
        ORDER BY title COLLATE NOCASE`
     ).all<SongRow>();
@@ -182,9 +186,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       if (pdfProblem) return pdfProblem;
     }
 
+    // A new song is appended to the end of the playlist, so adding one never
+    // disturbs the order the admin has set for the songs already there.
     await context.env.DB.prepare(
-      `INSERT INTO songs (id, title, artist, lyrics_by, music_by, lyrics, sheet_music_path, is_published)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO songs (id, title, artist, lyrics_by, music_by, lyrics, sheet_music_path, is_published, sort_order)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM songs))`
     )
       .bind(
         id,
@@ -199,7 +205,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       .run();
 
     const song = await context.env.DB.prepare(
-      `SELECT id, title, artist, lyrics_by, music_by, lyrics, sheet_music_path, is_published
+      `SELECT id, title, artist, lyrics_by, music_by, lyrics, sheet_music_path, is_published, sort_order
        FROM songs WHERE id = ?`
     )
       .bind(id)
@@ -287,7 +293,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     }
 
     const song = await context.env.DB.prepare(
-      `SELECT id, title, artist, lyrics_by, music_by, lyrics, sheet_music_path, is_published
+      `SELECT id, title, artist, lyrics_by, music_by, lyrics, sheet_music_path, is_published, sort_order
        FROM songs WHERE id = ?`
     )
       .bind(id)

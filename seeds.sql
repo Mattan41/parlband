@@ -8,16 +8,20 @@ INSERT INTO musicians (id, name) VALUES
 
 -- ============================================================================
 -- 2. SONGS (the abstract work)
+-- `sort_order` is the landing-page playlist order (/admin/playlist). These
+-- values reproduce the order the site used before the column existed
+-- (newest recording year first, then title), so a reset database matches
+-- production until the admin reorders it.
 -- ============================================================================
-INSERT INTO songs (id, title, artist, lyrics_by, music_by, lyrics, sheet_music_path) VALUES
-  ('fri', 'Fri', 'Pärlband', 'Nova Kruskopf Eriksson', 'Nova Kruskopf Eriksson', NULL, NULL),
-  ('som-en-legend', 'Som en Legend', 'Pärlband', 'Mats Kruskopf Eriksson', 'Mats Kruskopf Eriksson', NULL, NULL),
-  ('cohen-och-kent', 'Cohen och Kent', 'Pärlband', 'Isabel Evers', 'Mats Kruskopf Eriksson', NULL, NULL),
-  ('mareld-i-natt', 'Mareld i natt', 'Pärlband', 'Nova Kruskopf Eriksson', 'Nova Kruskopf Eriksson', NULL, NULL),
-  ('sommarn-pa-boganeberget', 'Sommarn på Boganeberget', 'Pärlband', 'Nova Kruskopf Eriksson', 'Nova Kruskopf Eriksson', NULL, NULL),
-  ('mitt-ute-pa-fryken', 'Mitt ute på Fryken', 'Pärlband', 'Nova Kruskopf Eriksson', 'Örjan Ahnoff', NULL, NULL),
-  ('klockan-12', 'Klockan 12', 'Pärlband', 'Mats Kruskopf Eriksson', 'Mats Kruskopf Eriksson', NULL, NULL),
-  ('slaget-vid-poltava', 'Slaget vid Poltava', 'Pärlband', 'Nova Kruskopf Eriksson', 'Nova Kruskopf Eriksson', NULL, NULL);
+INSERT INTO songs (id, title, artist, lyrics_by, music_by, lyrics, sheet_music_path, sort_order) VALUES
+  ('fri', 'Fri', 'Pärlband', 'Nova Kruskopf Eriksson', 'Nova Kruskopf Eriksson', NULL, NULL, 4),
+  ('som-en-legend', 'Som en Legend', 'Pärlband', 'Mats Kruskopf Eriksson', 'Mats Kruskopf Eriksson', NULL, NULL, 2),
+  ('cohen-och-kent', 'Cohen och Kent', 'Pärlband', 'Isabel Evers', 'Mats Kruskopf Eriksson', NULL, NULL, 5),
+  ('mareld-i-natt', 'Mareld i natt', 'Pärlband', 'Nova Kruskopf Eriksson', 'Nova Kruskopf Eriksson', NULL, NULL, 1),
+  ('sommarn-pa-boganeberget', 'Sommarn på Boganeberget', 'Pärlband', 'Nova Kruskopf Eriksson', 'Nova Kruskopf Eriksson', NULL, NULL, 3),
+  ('mitt-ute-pa-fryken', 'Mitt ute på Fryken', 'Pärlband', 'Nova Kruskopf Eriksson', 'Örjan Ahnoff', NULL, NULL, 6),
+  ('klockan-12', 'Klockan 12', 'Pärlband', 'Mats Kruskopf Eriksson', 'Mats Kruskopf Eriksson', NULL, NULL, 8),
+  ('slaget-vid-poltava', 'Slaget vid Poltava', 'Pärlband', 'Nova Kruskopf Eriksson', 'Nova Kruskopf Eriksson', NULL, NULL, 7);
 
 -- ============================================================================
 -- 3. RECORDINGS (R2 files & metadata)

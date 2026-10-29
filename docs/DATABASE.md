@@ -72,6 +72,14 @@ settings.
     `recordings.is_public`/`is_primary` – a song must be published **and** have a
     public recording to be playable. Added in
     `0009_songs_gigs_is_published.sql`.
+  - `sort_order`: Position in the public playlist (`1` = first), controlled at
+    `/admin/playlist`. Contiguous `1..N`: a reorder rewrites every row in one
+    `batch()` (`PUT /api/admin/playlist`), and a newly created song is appended at
+    `MAX(sort_order) + 1`, so adding one never disturbs the order already set.
+    `0` means "not placed yet" (a row inserted before the migration ran, or by
+    `seeds.sql`); those sort first, by recording year and title – exactly the
+    order the site used before the column existed. Added in
+    `0011_songs_sort_order.sql`.
 
 - **recordings** – A specific recorded version of a song.
   - `id`: Autoincrement, `song_id` → `songs.id`.
@@ -150,6 +158,12 @@ settings.
 - Only **published** songs are returned (`WHERE s.is_published = 1`), and the
   `credits` query is scoped to the same published songs, so a draft's credits
   cannot leak through the join.
+- **Order:** the array follows `songs.sort_order` – the admin's playlist order
+  (`ORDER BY s.sort_order, r.year DESC, s.title COLLATE NOCASE`, the last two only
+  as the tiebreak for rows still at `0`). This is also the order the player's
+  catalogue advance uses. The Texter view reads the same endpoint but re-sorts by
+  title in the browser (`components/texter/sortSongsByTitle.ts`), so the lyrics
+  list is always alphabetical regardless of the playlist order.
 - `recording_id` is the `recordings.id` of the exact recording that
   `mp3_path`/`wav_path` come from (the same subquery row). This is the id sent to
   `POST /api/plays` and to `GET /api/downloads`. If a song ever displays multiple
@@ -166,6 +180,7 @@ dev:d1` the admin routes are open – that is expected.
 | Endpoint                | Methods                        | Purpose                                                                                                                                                    |
 | ----------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/api/admin/songs`      | `GET`, `POST`, `PUT`, `DELETE` | List every song with **all** its recordings and each recording's credits; create and update songs. `DELETE` removes a song only when it has no recordings. |
+| `/api/admin/playlist`   | `PUT`                          | Save the public playlist order: the complete ordered list of song ids is renumbered into `songs.sort_order` (`1..N`) in one transaction.                   |
 | `/api/admin/recordings` | `POST`, `PUT`, `DELETE`        | Create a recording under a song, update one (including `is_primary`/`is_public`), or delete it.                                                            |
 | `/api/admin/credits`    | `POST`, `DELETE`               | Add or remove a `(recording_id, musician_id, instrument)` row.                                                                                             |
 | `/api/admin/musicians`  | `GET`, `POST`, `PUT`           | List musicians for the dropdown; create one by name (idempotent) and rename one with `PUT`.                                                                |
@@ -240,6 +255,14 @@ Conventions:
   loss (an R2 lifecycle rule could clean up strays later).
 - Song ids are slugs (`^[a-z0-9]+(-[a-z0-9]+)*$`); the admin UI derives them
   from the title.
+- **Playlist order:** `PUT /api/admin/playlist` takes
+  `{ "order": ["id-1", "id-2", …] }` – **every** song exactly once, in the wanted
+  order (validation in `playlist-rules.ts`). A malformed list is `400`
+  (`order_invalid`, `order_duplicate`); a list that does not match the rows in
+  `songs` is a stale client and is refused with
+  `409 { code: "playlist_mismatch" }` before anything is written. There is no
+  `GET` on this endpoint – the current order comes back with
+  `GET /api/admin/songs` as `sort_order`.
 
 ## Plays: POST /api/plays
 

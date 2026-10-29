@@ -37,6 +37,8 @@ export interface AdminSong {
   sheet_music_path: string | null;
   /** 1 when the song is visible on the public site, 0 when it is a draft. */
   is_published: number;
+  /** Position in the public playlist (1 = first); 0 before it has been placed. */
+  sort_order: number;
   recordings: AdminRecording[];
 }
 

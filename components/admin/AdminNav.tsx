@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 const ADMIN_NAV_LINKS = [
   { href: "/admin", label: "Katalog" },
   { href: "/admin/recordings", label: "Inspelningar" },
+  { href: "/admin/playlist", label: "Spellista" },
   { href: "/admin/gigs", label: "Spelningar" },
   { href: "/admin/about", label: "Om oss" },
   { href: "/admin/settings", label: "Inställningar" },

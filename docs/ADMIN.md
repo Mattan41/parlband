@@ -11,8 +11,9 @@ Recordings are a nested accordion under the song, and a collapsed recording row
 shows its year/album, status badges and both counters.
 
 The admin area has its own top navigation – **Katalog** (`/admin`),
-**Inspelningar** (`/admin/recordings`), **Spelningar** (`/admin/gigs`),
-**Om oss** (`/admin/about`) and **Inställningar** (`/admin/settings`) – rendered
+**Inspelningar** (`/admin/recordings`), **Spellista** (`/admin/playlist`),
+**Spelningar** (`/admin/gigs`), **Om oss** (`/admin/about`) and
+**Inställningar** (`/admin/settings`) – rendered
 on every admin page (`components/admin/AdminNav.tsx`). It is separate from the
 public `components/SiteNav.tsx`, which links the public pages. The public
 heading of the gig section is **Kommande spelningar**; the nav pill keeps the
@@ -144,6 +145,27 @@ A song can have several recordings (e.g. studio + live).
   **Alla / Publika / Dolda** toggle filters by `is_public`. A counter shows how
   many of the total are currently visible.
 - Creating a new recording and editing the song itself remain in **Katalog**.
+
+## Spellista (vy)
+
+- **Spellista** in the admin nav opens `/admin/playlist`, where the order of the
+  songs on the landing page is set. That order is also the one the player follows
+  when the queue runs out and it advances by itself.
+- Move a song with the **↑** / **↓** buttons on its row (the buttons are disabled
+  at the top and the bottom). Nothing is written until you press **Spara ordning**,
+  which stays disabled while the list matches what is saved; **Återställ** drops
+  your moves. The counter next to the buttons reads **Sparad** or
+  **Osparade ändringar**.
+- Saving sends the **whole list** to `PUT /api/admin/playlist`, which renumbers it
+  `1..N` in one transaction. If the list no longer matches the songs in the
+  database (e.g. a song was added in another tab since the page loaded), the save
+  is refused – press **Återställ** to pick up the current songs and move again.
+- A **new song is appended to the end** of the playlist, so creating one never
+  disturbs the order you have set.
+- Unpublished songs appear here too (with an **Utkast** badge); they simply are not
+  visible to visitors until they are published, and they keep their position.
+- **Texter is not affected:** the lyrics list under `/texter` is always
+  alphabetical by title, whatever the playlist order is.
 
 ## Feedback and errors
 
