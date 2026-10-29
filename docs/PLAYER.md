@@ -56,7 +56,9 @@ restart or otherwise interrupt a track.
   mirrors the landing-page list into the store via `setCatalog`, so playback can
   continue through the catalogue once the manual queue runs out. The catalogue is
   deliberately not cleared on unmount, so it survives navigation to another
-  route. The mode comes from the `playback_mode` site setting (edited at
+  route. Its order is the admin's playlist order (`/admin/playlist`,
+  `songs.sort_order`), so "next track" follows whatever the band set up on the
+  landing page. The mode comes from the `playback_mode` site setting (edited at
   `/admin/settings`, read once via `GET /api/settings` and stored as
   `playbackMode`):
   - **`loop`** (default) – wraps from the last song back to the first

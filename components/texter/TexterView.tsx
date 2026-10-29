@@ -7,6 +7,7 @@ import {
   filterLyricLines,
   hasChordLines,
 } from "@/components/texter/lyricsLines";
+import { sortSongsByTitle } from "@/components/texter/sortSongsByTitle";
 import { toSong, type Song, type SongRow as SongRowData } from "@/data/songs";
 
 /** Song with a guaranteed non-empty `lyrics` string. */
@@ -27,6 +28,10 @@ function hasLyrics(song: Song): song is SongWithLyrics {
  * `?song=<id>` remains the single source of truth for the selection: a shared
  * link, the browser's back button and a "Visa text" tap in the player all just
  * change the query string.
+ *
+ * The list is always sorted alphabetically by title (sortSongsByTitle), so it
+ * is deliberately independent of the admin's playlist order for the landing
+ * page.
  *
  * Reading `useSearchParams` forces the tree below the closest Suspense boundary
  * to be client-side rendered during a production build; app/page.tsx provides
@@ -65,7 +70,9 @@ export default function TexterView() {
       })
       .then((rows) => {
         if (cancelled) return;
-        setSongs(rows.map(toSong).filter(hasLyrics));
+        // Titles always alphabetical here, regardless of the playlist order the
+        // admin sets for the landing page (/admin/playlist) – see sortSongsByTitle.
+        setSongs(sortSongsByTitle(rows.map(toSong).filter(hasLyrics)));
       })
       .catch(() => {
         if (!cancelled) setError(true);

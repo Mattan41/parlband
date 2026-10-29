@@ -56,14 +56,18 @@ app/                        Next.js App Router — routes only, no business logi
 ├── page.tsx                 / — the whole public SPA (Lyssna/Texter/Om oss views, see above)
 ├── admin/
 │   ├── page.tsx              /admin — song & recording catalogue editor
+│   ├── recordings/page.tsx   /admin/recordings — flat list of every recording
+│   ├── playlist/page.tsx     /admin/playlist — the public playlist order
 │   ├── gigs/page.tsx         /admin/gigs — gig calendar editor
-│   └── about/page.tsx        /admin/about — welcome-text + Om oss copy editor
+│   ├── about/page.tsx        /admin/about — welcome-text + Om oss copy editor
+│   └── settings/page.tsx     /admin/settings — site-wide settings editor
 ├── robots.ts                 /robots.txt
 └── sitemap.ts                /sitemap.xml
 components/
 ├── home/                     Hero, GigList, SongList — the "Lyssna" view
 ├── about/                    AboutView, install-app card + its pure detection helpers
-├── texter/                   TexterView + lyricsLines.ts (pure lyric/chord line filtering)
+├── texter/                   TexterView, lyricsLines.ts (pure lyric/chord filtering),
+│                             sortSongsByTitle.ts (alphabetical, playlist-independent)
 ├── admin/                    admin-only UI — currently flat, target split below
 ├── publicView.ts             PublicView type + readPublicView() (query string → active view)
 ├── PublicShell.tsx           shared page chrome (background, padding, SiteNav) for the public SPA

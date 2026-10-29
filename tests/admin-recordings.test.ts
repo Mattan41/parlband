@@ -48,6 +48,7 @@ function song(
     lyrics: null,
     sheet_music_path: null,
     is_published: 1,
+    sort_order: 0,
     recordings,
     ...overrides,
   };

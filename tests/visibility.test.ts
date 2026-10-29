@@ -25,6 +25,7 @@ const song: AdminSong = {
   lyrics: null,
   sheet_music_path: null,
   is_published: 1,
+  sort_order: 1,
   recordings: [],
 };
 

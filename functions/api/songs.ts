@@ -46,7 +46,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
          ORDER BY r2.is_primary DESC, r2.id DESC LIMIT 1
        )
        WHERE s.is_published = 1
-       ORDER BY r.year DESC, s.title COLLATE NOCASE`
+       -- The admin's playlist order (songs.sort_order, 1..N) wins. The old
+       -- "newest year, then title" rule only remains as the tiebreak for rows
+       -- still at 0 (a database that has not been reordered yet), so an
+       -- un-ordered site looks exactly like it did before the column existed.
+       ORDER BY s.sort_order, r.year DESC, s.title COLLATE NOCASE`
     ).all<SongRow>();
 
     // Credits are scoped to the same canonical public recording as the file
