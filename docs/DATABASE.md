@@ -112,6 +112,12 @@ settings.
     `0010_site_settings.sql`.
     The key/value shape keeps the schema stable when more copy or settings are
     added.
+    **Seed rows must be inserted with `INSERT OR IGNORE`**, because the admin API
+    upserts the same keys (`PUT /api/admin/settings`, `PUT /api/admin/content`): on
+    a site where the value was already saved, a plain `INSERT` fails with
+    `UNIQUE constraint failed: site_content.key`, which aborts the migration file,
+    leaves it unrecorded in `d1_migrations` and silently blocks every later
+    migration behind it.
 
 - **gigs** – The gig calendar ("Kommande spelningar"), edited at `/admin/gigs`.
   - `event_date`: ISO date (`YYYY-MM-DD`, text). `GET /api/gigs` only returns

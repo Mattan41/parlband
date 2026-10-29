@@ -10,5 +10,14 @@
 -- The app falls back to 'loop' when the row is missing, so a database that has
 -- not run this migration behaves exactly like before. The row makes the default
 -- explicit and editable at /admin/settings.
-INSERT INTO site_content (key, value) VALUES
+--
+-- OR IGNORE, not a plain INSERT: `PUT /api/admin/settings` upserts this same key
+-- (functions/api/admin/settings.ts), so a site where the band saved the player
+-- setting *before* this migration ran already holds the row. A plain INSERT then
+-- fails with `UNIQUE constraint failed: site_content.key`, which aborts the whole
+-- migration file: it is left unrecorded in d1_migrations and every later
+-- migration (0011 among them) is blocked behind it. OR IGNORE keeps the stored
+-- value – a real choice beats this default – and lets the migration succeed
+-- whether or not the row is already there.
+INSERT OR IGNORE INTO site_content (key, value) VALUES
   ('playback_mode', 'loop');
